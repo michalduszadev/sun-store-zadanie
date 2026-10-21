@@ -25,6 +25,8 @@
 | 8. Code review całości + poprawki, README sekcje 6–7 | 20:14 | 20:22 |
 | 8b. Przegląd architektury (improve-codebase-architecture): eksploracja, raport, weryfikacja, analiza | 20:22 | 20:38 |
 | 8c. Wspólny moduł `useDraftField` + testy, README | 20:38 | 20:46 |
+| Kontrole przed rozmową + strona do nauki (nie wliczane do zadania) | 20:46 | 21:02 |
+| README sekcja 4 prostszym językiem | 21:02 | 21:03 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.

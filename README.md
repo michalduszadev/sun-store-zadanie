@@ -125,19 +125,38 @@ Obecna implementacja realizuje już tę regułę na parametrach query (`buildLis
 
 ## 4. Czego celowo nie zrobiłem i co zrobiłbym dalej
 
-**Celowo pominięte:**
-- **Cache HTML na CDN (ISR / `routeRules`).** Vercel ISR domyślnie ignoruje query string, więc wszystkie URL-e z filtrami dostałyby ten sam zapamiętany HTML. To po cichu zepsułoby SSR filtrów. Wymaga jawnej listy `allowQuery` i testów; API ma już nagłówki `s-maxage` + `stale-while-revalidate`.
-- **Odchudzenie CSS Vuetify.** `entry.css` blokuje renderowanie (~150–300 ms na mobile), głównie przez klasy utility. Wymaga konfiguracji Sass (`$utilities`), a to duża zmiana jak na zysk.
-- **Wyszukiwanie rozmyte, stemming, literówki.** Produkcyjnie zrobiłbym to w Algolii (jest w stacku), a nie ręcznie.
-- **Strony produktów.** Zadanie ich nie wymaga. Przez to JSON-LD nie ma `url` produktów i nie da rich results.
+### Celowo pominięte
 
-**Dalej:**
-1. Czyste URL-e dla stron docelowych, `sitemap.xml` i `runtimeConfig.public.siteUrl` dla canonical, żeby `*.vercel.app` i docelowa domena nie konkurowały.
-2. i18n (7 języków jak w sun.store), waluty i ceny netto/brutto, kwoty w groszach zamiast liczb zmiennoprzecinkowych.
-3. CI w GitHub Actions: lint, typecheck, Vitest i Playwright na każdym PR, Playwright także na preview deployment.
-4. Pomiar u prawdziwych użytkowników (Vercel Speed Insights) i monitoring błędów (Sentry).
-5. Algolia InstantSearch z fasetami, gdy katalog urośnie poza zakres filtrowania w pamięci.
-6. Z przeglądu architektury (świadomie odłożone, bo dziś działają poprawnie, a refaktor tuż przed wysłaniem to ryzyko bez widocznego zysku): liczniki faset liczone tymi samymi regułami co linki (dziś zgodne, sprawdzone na 43 opcjach); jedna tabela sortowań zamiast trzech miejsc; jeden moduł opisujący aktywne filtry dla chipów i tytułu; flaga „cena za jednostkę ma sens” w definicji jednostki (przed dodaniem np. amperów dla złączek).
+**Zapisywanie gotowych stron na serwerach Vercela (cache HTML na CDN, tzw. ISR)**
+- *Co to jest:* Vercel może zapamiętać wygenerowaną stronę i podawać ją kolejnym osobom bez ponownego renderowania. Szybciej i taniej.
+- *Dlaczego nie teraz:* w domyślnej konfiguracji Vercel rozpoznaje stronę tylko po ścieżce (`/`) i ignoruje parametry po `?`. Wtedy `/?category=battery` i `/?category=solar-panel` dostałyby ten sam zapamiętany HTML, czyli link z filtrami pokazałby złe wyniki. Zepsułoby to wymaganie „link z filtrami renderuje się po stronie serwera z właściwymi wynikami”.
+- *Co bym zrobił:* włączył cache z jawną listą parametrów, które odróżniają strony (`allowQuery`), i sprawdził to testem E2E. Odpowiedzi API są już zapamiętywane na CDN (nagłówki `s-maxage` i `stale-while-revalidate`).
+
+**Mniejszy plik CSS Vuetify**
+- *Co to jest:* Vuetify dołącza tysiące gotowych klas pomocniczych (np. `mb-4`, `d-flex`). Przeglądarka musi pobrać cały plik CSS, zanim pokaże stronę; na telefonie w Lighthouse to ok. 150–300 ms.
+- *Dlaczego nie teraz:* usunięcie nieużywanych klas wymaga konfiguracji Sass i przejrzenia wszystkich komponentów, a wynik mobile i tak wynosi 92/100.
+- *Co bym zrobił:* wyłączył nieużywane grupy klas w konfiguracji Sass Vuetify (`$utilities`).
+
+**Wyszukiwanie odporne na literówki i odmiany słów**
+- *Co to jest:* dziś „baterry” nie znajdzie „battery”, a „panels” nie znajdzie „panel”.
+- *Dlaczego nie teraz:* napisanie tego samemu to osobny duży temat, a sun.store ma do tego Algolię.
+- *Co bym zrobił:* przeniósł wyszukiwanie i filtry do Algolii (InstantSearch).
+
+**Strony pojedynczych produktów**
+- Zadanie ich nie wymaga. Skutek uboczny: dane dla wyszukiwarek (JSON-LD) nie mają linków do produktów, więc Google nie pokaże przy nich np. ceny w wynikach wyszukiwania (tzw. rich results).
+
+### Co zrobiłbym dalej
+
+1. **Ładne adresy stron, które mają być w Google.** Na przykład `/baterie/ecocharge` zamiast `/?category=battery&manufacturer=ecocharge`, plus plik `sitemap.xml` z ich listą. Adres domeny do canonical ustawiłbym w konfiguracji (`runtimeConfig.public.siteUrl`). Dziś jest brany z adresu żądania, więc kopia strony na `*.vercel.app` i docelowa domena mogłyby ze sobą konkurować w Google.
+2. **Wiele języków i walut.** sun.store działa w 7 językach: tłumaczenia (`@nuxtjs/i18n`), ceny netto lub brutto zależnie od kraju. Kwoty trzymałbym w groszach (liczby całkowite), bo ułamki w JavaScripcie dają błędy zaokrągleń (`0.1 + 0.2` to nie dokładnie `0.3`).
+3. **Automatyczne sprawdzanie każdej zmiany (CI).** GitHub Actions uruchamia lint, typecheck, Vitest i Playwright przy każdym pull requeście; Playwright także na wersji podglądowej z Vercela.
+4. **Pomiar u prawdziwych użytkowników i zbieranie błędów.** Lighthouse to symulacja w laboratorium. Vercel Speed Insights mierzy szybkość u realnych osób, a Sentry zbiera błędy z produkcji.
+5. **Algolia przy dużym katalogu.** Przy tysiącach produktów filtrowanie w pamięci serwera przestaje wystarczać.
+6. **Porządki w kodzie z przeglądu architektury.** Dziś wszystko działa poprawnie, więc nie ryzykowałem zmian tuż przed wysłaniem:
+   - liczniki przy filtrach liczone tą samą funkcją co wyniki po kliknięciu (dziś dwa miejsca w kodzie muszą się ze sobą zgadzać; sprawdziłem 43 przypadki, zgadzają się);
+   - jedna lista sortowań zamiast trzech miejsc w kodzie (dziś nowe sortowanie to zmiany w 3 plikach);
+   - jedna funkcja opisująca aktywne filtry dla chipów i dla tytułu strony (dziś podobna logika jest w dwóch miejscach);
+   - informacja „czy cena za jednostkę ma sens” przy każdej jednostce, zanim dojdą np. ampery dla złączek, bo „cena za amper” nic nie mówi.
 
 ## 5. Wynik Lighthouse
 
@@ -193,9 +212,9 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 
 ## 7. Ile czasu realnie poświęciłem
 
-Łącznie **ok. 3 h 15 min zegarowo** w dwóch sesjach: 13:31–14:59 i 19:00–20:46, z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
+Łącznie **ok. 3 h 20 min zegarowo**: 13:31–14:59, 19:00–20:46 i 21:02–21:03 (poprawa czytelności README), z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
 
-Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 30 min**.
+Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 35 min**.
 
 | Etap | Czas |
 |---|---|
@@ -207,5 +226,6 @@ Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i 
 | Playwright E2E | 19:55–20:06 |
 | README, końcowy code review i poprawki | 20:10–20:22 |
 | Przegląd architektury i poprawka wyścigu w polach ceny | 20:22–20:46 |
+| Poprawa czytelności README (sekcja 4) | 21:02–21:03 |
 
 Pozostałe okienka (14:40–14:59, 19:07–19:15, 19:44–19:55, 20:06–20:10) to tłumaczenia. Część okienka 13:55–14:11 to tłumaczenie Nitro i Zod przemieszane z przeglądem kodu. Pełna tabela jest w [NOTES.md](NOTES.md).
