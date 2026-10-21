@@ -15,14 +15,11 @@ describe('extractSpec', () => {
       .toEqual({ value: 450, unit: 'W' })
   })
 
-  it('takes the first match when the description also mentions a stack total', () => {
-    const p = battery('PowerFlow Stack 7.5', 'The PowerFlow Stack 7.5 is a 7.5kWh modular LFP battery. You can stack up to four units for a total of 30kWh.')
-    expect(extractSpec(p)).toEqual({ value: 7.5, unit: 'kWh' })
-  })
-
-  it('takes the first match when the description also mentions module size', () => {
-    const p = battery('AuraPower Reserve 12.5', 'A 12.5kWh (five 2.5kWh modules) stackable LFP system.')
-    expect(extractSpec(p)).toEqual({ value: 12.5, unit: 'kWh' })
+  it.each([
+    ['stack total', 'PowerFlow Stack 7.5', 'The PowerFlow Stack 7.5 is a 7.5kWh modular LFP battery. You can stack up to four units for a total of 30kWh.', 7.5],
+    ['module size', 'AuraPower Reserve 12.5', 'A 12.5kWh (five 2.5kWh modules) stackable LFP system.', 12.5],
+  ])('takes the first match when the description also mentions a %s', (_, name, description, expected) => {
+    expect(extractSpec(battery(name, description))).toEqual({ value: expected, unit: 'kWh' })
   })
 
   it('accepts a space before the unit, comma decimals and case variants', () => {
@@ -44,9 +41,7 @@ describe('extractSpec', () => {
   })
 
   it('ignores implausible description values and falls back to the name', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(extractSpec(panel('Odd 450', 'Peak 0.45W per cell, 450 total.'))).toEqual({ value: 450, unit: 'W' })
-    warn.mockRestore()
   })
 
   it('prefers the description and warns when it disagrees with the name', () => {

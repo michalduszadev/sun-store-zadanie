@@ -20,6 +20,8 @@
 - **kWh/W**: reguła per kategoria (regex + jednostka + zakres wiarygodności). Opis ma pierwszeństwo (ma jednostkę), *pierwsze* dopasowanie wygrywa, nazwa jako fallback i cross-check (warn przy niezgodności). `W` case-sensitive + `\b`, więc nie łapie kW/kWh/V/A; obsługa `Wp`, przecinka dziesiętnego, spacji. Wartość poza zakresem (np. 0.45W „per cell”) → fallback do nazwy.
 - **Nie obsłużone świadomie**: separator tysięcy („1,500 W” → 1.5 → poza zakresem → fallback do nazwy), zakresy („400–450 W”), jednostki Wh/MWh.
 
+- **Po simplify (4 agenty: reuse/uproszczenia/wydajność/altitude)**: jednostka kWh/W miała dwa źródła prawdy (SPEC_RULES i CATEGORIES) → CATEGORIES (shared) mówi *która* kategoria ma *jaką* jednostkę, SPEC_RULES (server) tylko *jak* ją czytać z tekstu. `CategorySlug` wyprowadzony z `CATEGORY_SLUGS` (as const), `CATEGORIES` jako `Record<CategorySlug, …>` → TS wymusza kompletność. Usunięte potrójne trimowanie, sprawdzenia niemożliwe do spełnienia, reset cache po błędzie (asset jest w bundlu, błąd byłby deterministyczny). Numer linii CSV z `info: true` csv-parse zamiast `index + 2`. Katalog zwracany jako `readonly` (współdzielony między requestami).
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.

@@ -1,4 +1,4 @@
-export type CategorySlug = 'battery' | 'solar-panel' | 'connector'
+import type { CategorySlug } from '../utils/categories'
 
 export type SpecUnit = 'kWh' | 'W'
 

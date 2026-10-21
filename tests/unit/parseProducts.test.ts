@@ -38,6 +38,7 @@ describe('parseProductsCsv', () => {
     ].join('\n'))
     expect(products.map(p => p.name)).toEqual(['Good 5'])
     expect(warn).toHaveBeenCalledTimes(2)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('CSV line 3'))
     warn.mockRestore()
   })
 

@@ -1,7 +1,7 @@
-import type { CategorySlug, ProductSpec, SpecUnit } from '#shared/types/product'
+import type { ProductSpec, SpecUnit } from '#shared/types/product'
+import { CATEGORIES, type CategorySlug } from '#shared/utils/categories'
 
 interface SpecRule {
-  unit: SpecUnit
   /** First capture group is the number. Must not match neighbouring units (kW, V, A...). */
   pattern: RegExp
   /** Plausible range; values outside are treated as a parsing mistake. */
@@ -9,26 +9,22 @@ interface SpecRule {
   max: number
 }
 
-const NUMBER = String.raw`(\d+(?:[.,]\d+)?)`
-
 /**
- * One rule per category. Adding a spec for a new category
- * (e.g. amperage for connectors) means adding one entry here.
+ * How to read each unit from text. Which category has which unit lives in
+ * CATEGORIES (shared with the UI), so adding a spec to a category is:
+ * set its `specUnit`, and add a rule here if the unit is new.
  */
-const SPEC_RULES: Record<CategorySlug, SpecRule | null> = {
-  'battery': { unit: 'kWh', pattern: new RegExp(String.raw`\b${NUMBER}\s*kWh\b`, 'i'), min: 0.5, max: 200 },
+const SPEC_RULES: Record<SpecUnit, SpecRule> = {
+  kWh: { pattern: /\b(\d+(?:[.,]\d+)?)\s*kWh\b/i, min: 0.5, max: 200 },
   // Case-sensitive on purpose: "W"/"Wp" only, so kW, kWh and words never match.
-  'solar-panel': { unit: 'W', pattern: new RegExp(String.raw`\b${NUMBER}\s*Wp?\b`), min: 10, max: 1000 },
-  'connector': null,
+  W: { pattern: /\b(\d+(?:[.,]\d+)?)\s*Wp?\b/, min: 10, max: 1000 },
 }
 
 /** Model numbers sit at the end of the name: "EcoCharge HomeVault 13.5". */
-const TRAILING_NUMBER = new RegExp(String.raw`\s${NUMBER}$`)
+const TRAILING_NUMBER = /\s(\d+(?:[.,]\d+)?)$/
 
 function toNumber(raw: string | undefined): number | null {
-  if (raw === undefined) return null
-  const value = Number(raw.replace(',', '.'))
-  return Number.isFinite(value) ? value : null
+  return raw === undefined ? null : Number(raw.replace(',', '.'))
 }
 
 interface SpecSource {
@@ -44,23 +40,24 @@ interface SpecSource {
  * The trailing number in the name is a fallback and a cross-check.
  */
 export function extractSpec({ name, description, category }: SpecSource): ProductSpec | null {
-  const rule = SPEC_RULES[category]
-  if (!rule) return null
+  const unit = CATEGORIES[category].specUnit
+  if (!unit) return null
 
+  const rule = SPEC_RULES[unit]
   const isPlausible = (v: number | null): v is number => v !== null && v >= rule.min && v <= rule.max
 
   const fromDescription = toNumber(description.match(rule.pattern)?.[1])
-  const fromName = toNumber(name.trim().match(TRAILING_NUMBER)?.[1])
+  const fromName = toNumber(name.match(TRAILING_NUMBER)?.[1])
 
   if (isPlausible(fromDescription)) {
     if (fromName !== null && fromName !== fromDescription) {
-      console.warn(`[specs] "${name}": description says ${fromDescription} ${rule.unit}, name says ${fromName}. Using description.`)
+      console.warn(`[specs] "${name}": description says ${fromDescription} ${unit}, name says ${fromName}. Using description.`)
     }
-    return { value: fromDescription, unit: rule.unit }
+    return { value: fromDescription, unit }
   }
 
   if (isPlausible(fromName)) {
-    return { value: fromName, unit: rule.unit }
+    return { value: fromName, unit }
   }
 
   return null

@@ -1,7 +1,11 @@
-import type { CategorySlug, SpecUnit } from '../types/product'
+import type { SpecUnit } from '../types/product'
+
+/** Single source of truth for categories; order here is the order shown in the UI. */
+export const CATEGORY_SLUGS = ['solar-panel', 'battery', 'connector'] as const
+
+export type CategorySlug = (typeof CATEGORY_SLUGS)[number]
 
 export interface CategoryDefinition {
-  slug: CategorySlug
   /** Value used in the `category` column of products.csv. */
   csvValue: string
   label: string
@@ -12,19 +16,13 @@ export interface CategoryDefinition {
   specLabel: string | null
 }
 
-export const CATEGORIES: readonly CategoryDefinition[] = [
-  { slug: 'solar-panel', csvValue: 'solar panel', label: 'Solar panel', labelPlural: 'Solar panels', specUnit: 'W', specLabel: 'Power' },
-  { slug: 'battery', csvValue: 'battery', label: 'Battery', labelPlural: 'Batteries', specUnit: 'kWh', specLabel: 'Capacity' },
-  { slug: 'connector', csvValue: 'connector', label: 'Connector', labelPlural: 'Connectors & accessories', specUnit: null, specLabel: null },
-]
-
-export const CATEGORY_SLUGS = CATEGORIES.map(c => c.slug) as [CategorySlug, ...CategorySlug[]]
-
-export function getCategory(slug: CategorySlug): CategoryDefinition {
-  // CATEGORIES covers every CategorySlug, so the lookup cannot fail.
-  return CATEGORIES.find(c => c.slug === slug)!
+// Record<CategorySlug, …> makes TypeScript require an entry for every slug.
+export const CATEGORIES: Record<CategorySlug, CategoryDefinition> = {
+  'solar-panel': { csvValue: 'solar panel', label: 'Solar panel', labelPlural: 'Solar panels', specUnit: 'W', specLabel: 'Power' },
+  'battery': { csvValue: 'battery', label: 'Battery', labelPlural: 'Batteries', specUnit: 'kWh', specLabel: 'Capacity' },
+  'connector': { csvValue: 'connector', label: 'Connector', labelPlural: 'Connectors & accessories', specUnit: null, specLabel: null },
 }
 
-export function categoryFromCsv(value: string): CategoryDefinition | undefined {
-  return CATEGORIES.find(c => c.csvValue === value.trim().toLowerCase())
+export function categoryFromCsv(value: string): CategorySlug | undefined {
+  return CATEGORY_SLUGS.find(slug => CATEGORIES[slug].csvValue === value.toLowerCase())
 }

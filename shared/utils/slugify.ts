@@ -2,7 +2,7 @@
 export function slugify(input: string): string {
   return input
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '') // strip diacritics: "é" -> "e"
     .toLowerCase()
     .replace(/[^a-z0-9.]+/g, '-')
     .replace(/(^-|-$)/g, '')
