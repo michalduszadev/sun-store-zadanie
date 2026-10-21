@@ -17,8 +17,10 @@ const ICONS: Record<CategorySlug, string> = {
 <template>
   <v-card variant="outlined" class="product-card d-flex flex-column h-100 pa-4 ga-3">
     <div class="d-flex align-center ga-3">
-      <span class="category-icon" :title="CATEGORIES[product.category].label">
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :d="ICONS[product.category]" /></svg>
+      <span class="category-icon">
+        <svg viewBox="0 0 24 24" width="24" height="24" role="img" :aria-label="CATEGORIES[product.category].label">
+          <path :d="ICONS[product.category]" />
+        </svg>
       </span>
       <div>
         <p class="text-overline text-medium-emphasis lh-tight">

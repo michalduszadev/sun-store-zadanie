@@ -32,6 +32,10 @@ export default defineNuxtConfig({
               primary: '#1f6f43',
               secondary: '#f2a900',
             },
+            variables: {
+              // Default 0.6 makes field labels ~4.3:1 contrast on white (WCAG AA needs 4.5:1).
+              'medium-emphasis-opacity': 0.7,
+            },
           },
         },
       },

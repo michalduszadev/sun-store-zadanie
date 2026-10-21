@@ -73,8 +73,9 @@ useHead({
       <v-col cols="12" md="3" class="d-none d-md-block">
         <aside aria-label="Filters">
           <!-- Delayed hydration: hydrates only once visible. On phones the sidebar is
-               display:none, so its ~30 inputs are never hydrated (less main-thread work);
-               the server-rendered category links are still in the HTML for crawlers. -->
+               display:none, so its ~30 inputs are not hydrated on load (less main-thread
+               work) until it becomes visible or its props change (then Vue renders it
+               fresh). The server-rendered category links stay in the HTML for crawlers. -->
           <LazyProductFilters hydrate-on-visible :facets="data.facets" />
         </aside>
       </v-col>
