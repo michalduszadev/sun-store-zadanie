@@ -12,43 +12,64 @@ const ICONS: Record<CategorySlug, string> = {
 }
 </script>
 
+<!-- Plain HTML inside one v-card: the card has no interactivity, and 24 cards x
+     ~6 Vuetify components each was a measurable share of hydration time on mobile. -->
 <template>
-  <v-card variant="outlined" class="product-card d-flex flex-column h-100">
-    <v-card-item>
-      <template #prepend>
-        <v-avatar color="primary" variant="tonal" rounded>
-          <v-icon :icon="ICONS[product.category]" :aria-label="CATEGORIES[product.category].label" />
-        </v-avatar>
-      </template>
-      <p class="text-overline text-medium-emphasis lh-tight">
-        {{ product.manufacturer }}
-      </p>
-      <h2 class="text-subtitle-1 font-weight-bold lh-tight">
-        {{ product.name }}
-      </h2>
-    </v-card-item>
+  <v-card variant="outlined" class="product-card d-flex flex-column h-100 pa-4 ga-3">
+    <div class="d-flex align-center ga-3">
+      <span class="category-icon" :title="CATEGORIES[product.category].label">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path :d="ICONS[product.category]" /></svg>
+      </span>
+      <div>
+        <p class="text-overline text-medium-emphasis lh-tight">
+          {{ product.manufacturer }}
+        </p>
+        <h2 class="text-subtitle-1 font-weight-bold lh-tight">
+          {{ product.name }}
+        </h2>
+      </div>
+    </div>
 
-    <v-card-text class="flex-grow-1 pb-2">
-      <v-chip v-if="product.spec" size="small" color="secondary" variant="flat" class="mb-2 font-weight-bold">
-        {{ formatSpec(product.spec) }}
-      </v-chip>
+    <div class="flex-grow-1">
+      <span v-if="product.spec" class="spec-badge">{{ formatSpec(product.spec) }}</span>
       <p class="description text-body-2 text-medium-emphasis">
         {{ product.description }}
       </p>
-    </v-card-text>
+    </div>
 
-    <v-card-actions class="px-4 pb-4 pt-0 d-flex align-end justify-space-between">
+    <div class="d-flex align-end justify-space-between">
       <span class="text-h6 font-weight-bold">{{ formatPrice(product.price) }}</span>
       <span v-if="product.spec && product.unitPrice !== null" class="text-caption text-medium-emphasis">
         {{ formatUnitPrice(product.unitPrice, product.spec.unit) }}
       </span>
-    </v-card-actions>
+    </div>
   </v-card>
 </template>
 
 <style scoped>
 .lh-tight {
   line-height: 1.3;
+}
+
+.category-icon {
+  display: inline-flex;
+  flex: none;
+  padding: 8px;
+  border-radius: 8px;
+  color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.12);
+  fill: currentColor;
+}
+
+.spec-badge {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgb(var(--v-theme-secondary));
+  color: rgb(var(--v-theme-on-secondary));
 }
 
 /* Three lines keep cards the same height; the full text stays in the HTML for SEO. */

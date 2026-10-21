@@ -22,27 +22,34 @@ const specHint = CATEGORY_SLUGS
       <h2 class="text-subtitle-2 mb-1">
         Category
       </h2>
-      <v-list density="compact" nav class="pa-0">
-        <v-list-item
-          :to="linkTo({ category: undefined })"
-          :active="!query.category"
-          title="All products"
-          color="primary"
-        />
-        <v-list-item
-          v-for="category in facets.categories"
-          :key="category.value"
-          :to="linkTo({ category: category.value })"
-          :active="query.category === category.value"
-          :title="category.label"
-          :disabled="category.count === 0 && query.category !== category.value"
-          color="primary"
-        >
-          <template #append>
-            <span class="text-caption text-medium-emphasis">{{ category.count }}</span>
-          </template>
-        </v-list-item>
-      </v-list>
+      <!-- ul/li: v-list renders role="list" with <a> children, which fails the ARIA list rule. -->
+      <ul class="category-list">
+        <li>
+          <v-list-item
+            :to="linkTo({ category: undefined })"
+            :active="!query.category"
+            title="All products"
+            color="primary"
+            density="compact"
+            rounded="lg"
+          />
+        </li>
+        <li v-for="category in facets.categories" :key="category.value">
+          <v-list-item
+            :to="linkTo({ category: category.value })"
+            :active="query.category === category.value"
+            :title="category.label"
+            :disabled="category.count === 0 && query.category !== category.value"
+            color="primary"
+            density="compact"
+            rounded="lg"
+          >
+            <template #append>
+              <span class="text-caption text-medium-emphasis">{{ category.count }}</span>
+            </template>
+          </v-list-item>
+        </li>
+      </ul>
     </nav>
 
     <section aria-labelledby="filter-manufacturer">
@@ -96,6 +103,16 @@ const specHint = CATEGORY_SLUGS
 </template>
 
 <style scoped>
+.category-list {
+  list-style: none;
+  padding: 0;
+}
+
+/* Same compact size as Vuetify's `v-list nav`, which this list replaced. */
+.category-list :deep(.v-list-item-title) {
+  font-size: 0.8125rem;
+}
+
 .manufacturers {
   max-height: 22rem;
   overflow-y: auto;
