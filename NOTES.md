@@ -15,6 +15,8 @@
 | Objaśnienia etapu 3 | 14:40 | 14:55 |
 | **Pauza** | 14:59 | 19:00 |
 | 4. SEO (+ simplify) | 19:00 | 19:07 |
+| 4b. Objaśnienia SEO/fasety/JSON-LD | 19:07 | 19:15 |
+| 5. Deploy Vercel + Lighthouse + poprawki (+ simplify) | 19:15 | 19:45 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -55,6 +57,18 @@
 - **Canonical zawsze na samą siebie, znormalizowany**: bez `utm_*`/śmieci, kolejność parametrów stała, strona przycięta przez serwer (`?page=99` → canonical `?page=7`). Nie łączymy `noindex` z canonical wskazującym *inny* URL (sprzeczne sygnały dla Google). Origin z `useRequestURL()`; w produkcji z własną domeną lepiej `runtimeConfig.public.siteUrl` (żeby `*.vercel.app` i domena nie konkurowały).
 - **JSON-LD `ItemList` → `Product` + `Offer` (EUR) + `additionalProperty` z kodem jednostki UN/CEFACT (KWH, WTT)**: pozycje liczone przez strony (strona 2 zaczyna od 25). Brak `url` produktów (nie ma stron produktu), więc to opis danych, nie rich results. Escapowanie `<` robi unhead dla skryptów typu `*json` (sprawdzone w kodzie i renderem).
 
+- **Deploy: Vercel z integracją GitHub** (każdy push na `main` = deploy produkcyjny, branch = preview). Przypięte `engines.node: 24.x` i `packageManager: pnpm@12.8.1` + zmienna `ENABLE_EXPERIMENTAL_COREPACK=1` (Vercel wybiera pnpm po `lockfileVersion: 9.0`, czyli starszy pnpm; Corepack wymusza tę samą wersję co lokalnie). `onlyBuiltDependencies` obok `allowBuilds` jako zabezpieczenie dla starszego pnpm. GitHub App Vercela tylko na to jedno repo (najmniejsze uprawnienia). Plugin „Vercel for agents” pominięty (niepotrzebny przy deployu z gita).
+- **Lighthouse, przed → po** (mediana; mobile 5 przebiegów, desktop 3; Lighthouse 13.5, headless Chrome, produkcja na Vercel):
+  - mobile: Performance 83 → **92**, Accessibility 96 → **100**, Best Practices 100, SEO 100; CLS 0.078 → **0**, TBT 380 → ~250 ms
+  - desktop: Performance 99 → **100**, Accessibility 90 → **100**, BP 100, SEO 100
+  - rozrzut mobile 84–96 (symulowane 4× wolniejsze CPU na moim laptopie) → dlatego mediana
+- **Poprawki z Lighthouse**:
+  - CLS: `v-app-bar` mierzy swoją wysokość dopiero po hydracji (SSR wysyła `--v-layout-top: 0px`, klient 64px → cała treść skacze). Zamiana na zwykły `<header>` ze `position: sticky`.
+  - TBT: sidebar z filtrami jako `<LazyProductFilters hydrate-on-visible>` (Nuxt delayed hydration). Na telefonie sidebar ma `display:none` → nie hydratuje się na starcie (~30 inputów mniej); HTML z linkami kategorii nadal jest w SSR dla robotów. Karta produktu: zwykły HTML w jednym `v-card` (24 karty × ~6 komponentów Vuetify mniej do hydracji).
+  - Kontrast: etykiety pól Vuetify 4.3:1 (WCAG AA wymaga 4.5:1) → zmienna motywu `medium-emphasis-opacity: 0.7` (ok. 5.9:1).
+  - ARIA: `v-list` ma `role="list"`, a dzieci-linki nie mają `role="listitem"` → `<ul>/<li>`.
+- **Świadomie nie zrobione**: (1) cache HTML przez `routeRules` ISR/SWR: Vercel ISR domyślnie ignoruje query string, więc wszystkie URL-e z filtrami dostałyby ten sam HTML (złamany SSR filtrów); wymagałoby jawnej listy `allowQuery`. (2) Odchudzenie CSS Vuetify (entry.css render-blocking, głównie klasy utility) wymaga konfiguracji Sass `$utilities` – duża zmiana. (3) Natywny `<select>` zamiast `v-select` – mały zysk (VOverlay i tak potrzebny dla dialogu).
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
@@ -65,3 +79,4 @@
 - **Wyścig w wyszukiwarce** (złapany testem w przeglądarce, nie przez review ani testy jednostkowe): `watch` URL→pole nadpisywał tekst dopisany w trakcie trwającej nawigacji („bat” + „tery” → „bat”). Poprawka: ignorowanie „echa” własnego commitu.
 - Escape `\u003c` w JSON-LD: przy zapisie pliku sekwencja zamieniła się w dosłowne `<`, więc „escapowanie” było no-opem; złapał to test bezpieczeństwa. Ostatecznie ręczny escape usunięty, bo unhead robi to sam (simplify znalazł, zweryfikowane w źródle i renderem).
 - Dev server nie podłapał auto-importu z nowego pliku w `shared/utils` (500 „buildListingSeo is not defined”), typecheck przechodził → restart serwera.
+- Pierwsza poprawka kontrastu (reguła CSS) nie działała: CSS Vuetify ładuje się po naszym, przy tej samej specyficzności wygrywa – złapał to drugi pomiar Lighthouse; ostatecznie zmienna motywu (sugestia simplify).
