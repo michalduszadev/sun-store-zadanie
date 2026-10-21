@@ -12,7 +12,7 @@ interface SpecRule {
 /**
  * How to read each unit from text. Which category has which unit lives in
  * CATEGORIES (shared with the UI), so adding a spec to a category is:
- * set its `specUnit`, and add a rule here if the unit is new.
+ * set its `spec`, and add a rule here if the unit is new.
  */
 const SPEC_RULES: Record<SpecUnit, SpecRule> = {
   kWh: { pattern: /\b(\d+(?:[.,]\d+)?)\s*kWh\b/i, min: 0.5, max: 200 },
@@ -40,7 +40,7 @@ interface SpecSource {
  * The trailing number in the name is a fallback and a cross-check.
  */
 export function extractSpec({ name, description, category }: SpecSource): ProductSpec | null {
-  const unit = CATEGORIES[category].specUnit
+  const unit = CATEGORIES[category].spec?.unit
   if (!unit) return null
 
   const rule = SPEC_RULES[unit]

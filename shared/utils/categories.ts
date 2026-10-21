@@ -10,17 +10,15 @@ export interface CategoryDefinition {
   csvValue: string
   label: string
   labelPlural: string
-  /** Unit of the extractable spec, or null when the category has none. */
-  specUnit: SpecUnit | null
-  /** Human label of the spec ("Capacity", "Power"). */
-  specLabel: string | null
+  /** The extractable spec ("Capacity" in kWh, "Power" in W), or null when the category has none. */
+  spec: { unit: SpecUnit, label: string } | null
 }
 
 // Record<CategorySlug, …> makes TypeScript require an entry for every slug.
 export const CATEGORIES: Record<CategorySlug, CategoryDefinition> = {
-  'solar-panel': { csvValue: 'solar panel', label: 'Solar panel', labelPlural: 'Solar panels', specUnit: 'W', specLabel: 'Power' },
-  'battery': { csvValue: 'battery', label: 'Battery', labelPlural: 'Batteries', specUnit: 'kWh', specLabel: 'Capacity' },
-  'connector': { csvValue: 'connector', label: 'Connector', labelPlural: 'Connectors & accessories', specUnit: null, specLabel: null },
+  'solar-panel': { csvValue: 'solar panel', label: 'Solar panel', labelPlural: 'Solar panels', spec: { unit: 'W', label: 'Power' } },
+  'battery': { csvValue: 'battery', label: 'Battery', labelPlural: 'Batteries', spec: { unit: 'kWh', label: 'Capacity' } },
+  'connector': { csvValue: 'connector', label: 'Connector', labelPlural: 'Connectors & accessories', spec: null },
 }
 
 export function categoryFromCsv(value: string): CategorySlug | undefined {
