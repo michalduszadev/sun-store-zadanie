@@ -1,13 +1,18 @@
 # Dziennik pracy (materiał do README)
 
 ## Czas
-| Etap | Start | Koniec |
+Źródło: znaczniki czasu commitów (`git log`) i `date`. Czas zegarowy obejmuje też tłumaczenie kodu i pytania (tryb nauki), więc jest dłuższy niż sam czas implementacji.
+
+| Etap | Start | Koniec (commit) |
 |---|---|---|
-| 0. Setup | 13:45 | 13:52 |
-| 1. Dane + kWh/W | 13:52 | 13:56 |
-| 1b. simplify + repo | 13:56 | 14:10 |
-| 2. Query + API | 14:10 | 14:35 |
-| 3. UI + URL state | 14:40 | 15:25 |
+| Analiza zadania, plan, wybór skilli | 13:31 | ~13:45 |
+| 0. Setup | ~13:45 | 13:52 |
+| 1. Dane + kWh/W | 13:52 | 13:55 |
+| 1b. Objaśnienie Nitro/Zod, simplify, repo | 13:55 | 14:11 |
+| 2. Query + API (+ simplify) | 14:11 | 14:18 |
+| 3. UI + stan w URL (+ simplify) | 14:18 | 14:35 |
+| 3b. Code review + poprawki | 14:35 | 14:40 |
+| Objaśnienia etapu 3 | 14:40 | 14:55 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
