@@ -26,3 +26,6 @@ logs
 # Tests
 /test-results/
 /playwright-report/
+
+# Local agent notes
+.claude/

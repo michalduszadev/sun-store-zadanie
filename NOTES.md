@@ -13,6 +13,7 @@
 | 3. UI + stan w URL (+ simplify) | 14:18 | 14:35 |
 | 3b. Code review + poprawki | 14:35 | 14:40 |
 | Objaśnienia etapu 3 | 14:40 | 14:55 |
+| **Pauza** | 14:59 | (wznowienie: wpisać z `date`) |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
