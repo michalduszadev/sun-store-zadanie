@@ -16,7 +16,9 @@
 | **Pauza** | 14:59 | 19:00 |
 | 4. SEO (+ simplify) | 19:00 | 19:07 |
 | 4b. Objaśnienia SEO/fasety/JSON-LD | 19:07 | 19:15 |
-| 5. Deploy Vercel + Lighthouse + poprawki (+ simplify) | 19:15 | 19:45 |
+| 5. Deploy Vercel + Lighthouse + poprawki (+ simplify) | 19:15 | 19:44 |
+| 5b. Objaśnienia etapu 5, hydracja | 19:44 | 19:55 |
+| 6. Playwright E2E | 19:55 | |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
