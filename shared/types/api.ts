@@ -1,8 +1,9 @@
+import type { CategorySlug } from '../utils/categories'
 import type { Product, SpecUnit } from './product'
 
-export interface FacetOption {
+export interface FacetOption<T extends string = string> {
   /** Slug used in the URL. */
-  value: string
+  value: T
   label: string
   /** Number of results if this option were selected, given the other active filters. */
   count: number
@@ -20,7 +21,7 @@ export interface ProductsResponse {
   page: number
   pageCount: number
   facets: {
-    categories: FacetOption[]
+    categories: FacetOption<CategorySlug>[]
     manufacturers: FacetOption[]
     /** Price bounds within the selected category; used for the range inputs. */
     price: NumericRange

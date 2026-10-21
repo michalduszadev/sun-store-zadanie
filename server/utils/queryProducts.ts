@@ -1,6 +1,6 @@
 import type { FacetOption, NumericRange, ProductsResponse } from '#shared/types/api'
 import type { Product } from '#shared/types/product'
-import { CATEGORIES, CATEGORY_SLUGS } from '#shared/utils/categories'
+import { CATEGORIES, CATEGORY_SLUGS, type CategorySlug } from '#shared/utils/categories'
 import { PAGE_SIZE, type ProductQuery, type SortOption } from '#shared/utils/productQuery'
 
 type Comparator = (a: Product, b: Product) => number
@@ -53,7 +53,7 @@ function countBy(products: Product[], key: (p: Product) => string): Map<string, 
   return counts
 }
 
-function categoryFacet(catalog: readonly Product[], query: ProductQuery): FacetOption[] {
+function categoryFacet(catalog: readonly Product[], query: ProductQuery): FacetOption<CategorySlug>[] {
   const counts = countBy(catalog.filter(createFilter(query, 'category')), p => p.category)
   return CATEGORY_SLUGS.map(slug => ({ value: slug, label: CATEGORIES[slug].labelPlural, count: counts.get(slug) ?? 0 }))
 }

@@ -7,6 +7,7 @@
 | 1. Dane + kWh/W | 13:52 | 13:56 |
 | 1b. simplify + repo | 13:56 | 14:10 |
 | 2. Query + API | 14:10 | 14:35 |
+| 3. UI + URL state | 14:40 | 15:25 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -31,8 +32,18 @@
 - **Cache-Control** `s-maxage=3600, stale-while-revalidate`: dane zmieniają się tylko z deployem, a Vercel czyści CDN przy deployu. Nagłówek ustawiany *po* udanym wczytaniu katalogu, żeby nie cache'ować błędu.
 - **`getQuery` zamiast `getValidatedQuery`**: ten drugi służy do walidacji, która rzuca 400; my celowo nie rzucamy.
 
+- **`useProductQuery`**: jedyne miejsce, które czyta/pisze URL. `query = computed(parse(route.query))`, `update(patch)` = `router.push` (nowy wpis w historii → wstecz działa), `linkTo(patch)` dla `:to` (kategorie i strony to prawdziwe `<a href>`, crawlowalne).
+- **`useFetch` z `serializeProductQuery(query)`** zamiast surowego `route.query`: znormalizowany URL API (lepszy cache, `utm_*` nie idą do API). Stały `key: 'products'` → poprzednie wyniki zostają na ekranie (przyciemnione) podczas ładowania nowych.
+- **Debounce wyszukiwania 350 ms** + Enter od razu; pola zakresów commitują na blur/Enter. Lokalny stan pola + `watch` URL → pole (wstecz/„Clear all” aktualizują inputy). Strażnik „bez zmian” w `commit()` jest potrzebny, bo każda zmiana resetuje stronę.
+- **Mobile**: filtry w `v-dialog` (lazy, montowany dopiero po otwarciu), sidebar ukrywany CSS-em (`d-none d-md-block`), nie `useDisplay()` → brak hydration mismatch (serwer nie zna szerokości ekranu).
+- **Paginacja jako linki** (`v-pagination` renderuje przyciski, nie `<a>`). Vue Router przy ustalaniu aktywnego linku ignoruje query → bez `exact` każdy `?page=N` byłby „aktywny” i miał `aria-current` (złapane w przeglądarce). Kategorie: jawny `:active`, bo `exact` zawiódłby na stronie > 1.
+- **Scroll**: domyślne zachowanie Nuxt przy zmianie samego query = brak przewijania (dobre dla filtrów); paginacja przewija na górę sama. Własny `router.options.ts` usunięty po review (nadpisywał całe domyślne zachowanie Nuxt, łącznie z obsługą hash i czekaniem na render).
+- **Odłożone do etapu 5 (najpierw pomiar Lighthouse)**: lżejsze karty (mniej komponentów Vuetify), natywny `<select>`, `routeRules` cache dla HTML.
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
 - Zod 4 + TS: `z.coerce.number()` w `.pipe()` ponownie nie typuje się (agent review sprawdził to tylko w node, nie w TS) → `.transform(Number).pipe(z.number())`.
 - Simplify etapu 2 wyłapał realny problem projektowy: brak wspólnej reguły „zmiana kategorii czyści zakres spec”, więc zakres 5–10 kWh przeszedłby na panele jako 5–10 W.
+- Agent review twierdził, że `update:modelValue` w `v-checkbox` jest typu `any` → w rzeczywistości `string[] | null`; typecheck to wyłapał.
+- Moja pierwsza wersja `router.options.ts` zastępowała cały domyślny scrollBehavior Nuxta: usunięta.
