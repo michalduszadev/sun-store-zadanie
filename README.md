@@ -212,9 +212,9 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 
 ## 7. Ile czasu realnie poświęciłem
 
-Łącznie **ok. 3 h 20 min zegarowo**: 13:31–14:59, 19:00–20:46 i 21:02–21:03 (poprawa czytelności README), z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
+Łącznie **ok. 3 h 15 min zegarowo** (195 min): 13:31–14:59, 19:00–20:46 i 21:02–21:03 (poprawa czytelności README), z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
 
-Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 35 min**.
+Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 30 min**.
 
 | Etap | Czas |
 |---|---|
