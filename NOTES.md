@@ -18,7 +18,7 @@
 | 4b. Objaśnienia SEO/fasety/JSON-LD | 19:07 | 19:15 |
 | 5. Deploy Vercel + Lighthouse + poprawki (+ simplify) | 19:15 | 19:44 |
 | 5b. Objaśnienia etapu 5, hydracja | 19:44 | 19:55 |
-| 6. Playwright E2E | 19:55 | |
+| 6. Playwright E2E (+ simplify) | 19:55 | 20:06 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -71,6 +71,9 @@
   - ARIA: `v-list` ma `role="list"`, a dzieci-linki nie mają `role="listitem"` → `<ul>/<li>`.
 - **Świadomie nie zrobione**: (1) cache HTML przez `routeRules` ISR/SWR: Vercel ISR domyślnie ignoruje query string, więc wszystkie URL-e z filtrami dostałyby ten sam HTML (złamany SSR filtrów); wymagałoby jawnej listy `allowQuery`. (2) Odchudzenie CSS Vuetify (entry.css render-blocking, głównie klasy utility) wymaga konfiguracji Sass `$utilities` – duża zmiana. (3) Natywny `<select>` zamiast `v-select` – mały zysk (VOverlay i tak potrzebny dla dialogu).
 
+- **Playwright E2E** (`tests/e2e/filters.spec.ts`, 2 testy): (1) scenariusz z zadania: kategoria (link) → producent (checkbox) → sort po kWh → URL zawiera wszystko → reload → te same wyniki i stan kontrolek → „wstecz” cofa tylko sort; (2) **z wyłączonym JavaScriptem**: link z filtrami renderuje na serwerze właściwe produkty, zaznaczony checkbox, wartość sortowania, `<title>` i `robots`. Testy idą na buildzie produkcyjnym (`webServer`), a `E2E_BASE_URL=https://sun-store-zadanie.vercel.app pnpm test:e2e` odpala je na wdrożeniu. Lokalny Chrome (`channel: 'chrome'`) zamiast pobierania Chromium. Czekanie na hydrację tym samym sprawdzeniem co oficjalny `@nuxt/test-utils` (`useNuxtApp().isHydrating === false`), bez dodawania zależności.
+- **Natywny `<select>` zamiast `v-select`** do sortowania: `v-select` chowa prawdziwy input pod tekstem wybranej opcji (Playwright nie mógł kliknąć, czytniki ekranu też mają trudniej), dociąga kod overlay do hydracji; natywny na telefonie otwiera systemowy wybierak. `selected` na `<option>`, nie `:value` na `<select>`: HTML nie ma atrybutu value dla selecta, więc tylko to przeżywa SSR.
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
@@ -82,3 +85,5 @@
 - Escape `\u003c` w JSON-LD: przy zapisie pliku sekwencja zamieniła się w dosłowne `<`, więc „escapowanie” było no-opem; złapał to test bezpieczeństwa. Ostatecznie ręczny escape usunięty, bo unhead robi to sam (simplify znalazł, zweryfikowane w źródle i renderem).
 - Dev server nie podłapał auto-importu z nowego pliku w `shared/utils` (500 „buildListingSeo is not defined”), typecheck przechodził → restart serwera.
 - Pierwsza poprawka kontrastu (reguła CSS) nie działała: CSS Vuetify ładuje się po naszym, przy tej samej specyficzności wygrywa – złapał to drugi pomiar Lighthouse; ostatecznie zmienna motywu (sugestia simplify).
+- **Test E2E bez JS złapał błąd SSR** w nowym selekcie (`:value` na `<select>` nie trafia do HTML → po odświeżeniu widać „Featured” przy `sort=spec-desc`). Sprawdzone: asercja nie przechodzi na starym kodzie, przechodzi na poprawionym.
+- **Simplify zaproponował usunięcie „zbędnej” asercji** `first().toHaveText(...)`, a ona była jedynym *czekaniem* przed jednorazowym `allTextContents()`. Lokalnie przechodziło (szybki serwer), na Vercelu test się sypał (wyścig z requestem). Poprawka: `toHaveText(lista)`, która sama ponawia. Wniosek: sugestie AI „to jest redundantne” trzeba weryfikować także pod kątem *czasu*, nie tylko logiki.

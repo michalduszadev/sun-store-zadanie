@@ -35,19 +35,21 @@ test('filters live in the URL: they survive a reload and "back" undoes the last 
   await page.getByLabel('Sort by').selectOption({ label: 'Capacity: high to low' })
   await expect(page).toHaveURL(/sort=spec-desc/)
 
-  const resultsBeforeReload = await productNames(page).allTextContents()
-  expect(resultsBeforeReload).toEqual([
+  // toHaveText retries until the list matches: results arrive asynchronously after
+  // the URL changes (a one-shot read like allTextContents() races the request).
+  const sortedByCapacity = [
     'EcoCharge HomeVault 13.5',
     'EcoCharge HomeVault 12',
     'EcoCharge HomeVault 10',
     'EcoCharge HomeVault 7.5',
     'EcoCharge HomeVault 5',
-  ])
+  ]
+  await expect(productNames(page)).toHaveText(sortedByCapacity)
 
   // Reload: same URL, same results, same controls.
   await page.reload()
   await waitForHydration(page)
-  await expect(productNames(page)).toHaveText(resultsBeforeReload)
+  await expect(productNames(page)).toHaveText(sortedByCapacity)
   await expect(page.getByRole('checkbox', { name: /EcoCharge/ })).toBeChecked()
   await expect(page.getByLabel('Sort by')).toHaveValue('spec-desc')
 
