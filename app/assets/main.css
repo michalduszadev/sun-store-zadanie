@@ -1,0 +1,15 @@
+/*
+ * Vuetify 3 hardcodes `font-family: Roboto, sans-serif` (no CSS variable).
+ * We do not load Roboto from the network (extra request, hurts LCP),
+ * so override it with the system font stack in one place.
+ */
+:root {
+  --app-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html,
+body,
+.v-application,
+.v-application [class*='text-'] {
+  font-family: var(--app-font);
+}
