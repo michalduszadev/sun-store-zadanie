@@ -29,3 +29,4 @@ logs
 
 # Local agent notes
 .claude/
+.vercel
