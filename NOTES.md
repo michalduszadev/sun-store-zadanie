@@ -23,6 +23,8 @@
 | 6b. Objaśnienia etapu 6 | 20:06 | 20:10 |
 | 7. README | 20:10 | 20:12 |
 | 8. Code review całości + poprawki, README sekcje 6–7 | 20:14 | 20:22 |
+| 8b. Przegląd architektury (improve-codebase-architecture): eksploracja, raport, weryfikacja, analiza | 20:22 | 20:38 |
+| 8c. Wspólny moduł `useDraftField` + testy, README | 20:38 | 20:46 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -81,6 +83,9 @@
 - **Końcowy code review (od pierwszego commita)**: tytuł i H1 odzwierciedlają teraz każdy filtr (wcześniej zakres ceny i kilku producentów nie zmieniało tytułu: luka względem „tytuł zależny od filtrów”); przypadek błędu API przeniesiony do modułu SEO (`buildListingSeo(query, null)` → `noindex`, strona nie podejmuje już decyzji SEO); jedno `formatRange` dla tytułów i chipów (`shared/utils/format.ts`); `hrefFor` w composable zamiast budowania URL w stronie; karta jako `<article>` (semantyka + lokator E2E po roli); Enter kończy „sesję” wyszukiwania (kolejna fraza = nowy wpis w historii); `robots` jako unia literałów.
 - **Świadomie nie poprawione po review**: `HEAD /api/products` → 404 (endpoint tylko GET); zduplikowane propsy elementu „All products” w liście kategorii; tabela kodów UN/CEFACT obok jednostek w `categories.ts` (`Record` pilnuje kompletności).
 
+- **Przegląd architektury (`improve-codebase-architecture`)**: 5 kandydatów; zrobiony tylko #1 („draft field”), bo jedyny miał realny, odtworzony błąd (min → Tab → max czyściło pole „To” podczas nawigacji po zatwierdzeniu min). Wspólny moduł `useDraftField`: lokalny tekst + synchronizacja z URL z ignorowaniem echa własnego zatwierdzenia; debounce i sesja historii zostały w wyszukiwarce (tylko jej). Pola zakresu nadal zatwierdzają min i max razem z lokalnych wartości (pojedyncza zmiana budowana z nieodświeżonego URL zgubiłaby wcześniejszą). Pozostali kandydaci (liczniki faset z reguł linków, tabela sortowań, opis aktywnych filtrów, jednostki) odłożeni: dziś działają poprawnie, wpisane do README jako „dalej”. Dodany `GLOSSARY.md`.
+- **Dostępność przy okazji**: `aria-label` na polach zakresu był martwy (Vuetify łączy widoczną etykietę przez `aria-labelledby`, które ma pierwszeństwo). Usunięty; kontekst daje `fieldset` + `legend`.
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
@@ -94,3 +99,4 @@
 - Pierwsza poprawka kontrastu (reguła CSS) nie działała: CSS Vuetify ładuje się po naszym, przy tej samej specyficzności wygrywa – złapał to drugi pomiar Lighthouse; ostatecznie zmienna motywu (sugestia simplify).
 - **Test E2E bez JS złapał błąd SSR** w nowym selekcie (`:value` na `<select>` nie trafia do HTML → po odświeżeniu widać „Featured” przy `sort=spec-desc`). Sprawdzone: asercja nie przechodzi na starym kodzie, przechodzi na poprawionym.
 - **Simplify zaproponował usunięcie „zbędnej” asercji** `first().toHaveText(...)`, a ona była jedynym *czekaniem* przed jednorazowym `allTextContents()`. Lokalnie przechodziło (szybki serwer), na Vercelu test się sypał (wyścig z requestem). Poprawka: `toHaveText(lista)`, która sama ponawia. Wniosek: sugestie AI „to jest redundantne” trzeba weryfikować także pod kątem *czasu*, nie tylko logiki.
+- Agent przeglądu architektury opisał wyścig w polach ceny jako hipotezę; potwierdziłem go dopiero ręcznie w przeglądarce. Test E2E tego wyścigu przechodził też na starym kodzie (szybki serwer produkcyjny), więc go odrzuciłem; dowodem jest test jednostkowy modułu. Przy pierwszej próbie porównania `git stash` z nieśledzonym plikiem po cichu się nie wykonał i „stary kod” był w rzeczywistości nowym; wyłapane przed wyciągnięciem wniosku.

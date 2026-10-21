@@ -5,19 +5,8 @@ const { query, update } = useProductQuery()
 
 // Local text so typing is instant; the URL is updated after a pause (debounce),
 // otherwise every keystroke would be a request and a history entry.
-const text = ref(query.value.q ?? '')
-
-// Last value this field wrote to the URL.
-let committed = query.value.q ?? ''
-
-// URL -> field: back/forward or "Clear all" must also update the input.
-// The URL change caused by our own commit is ignored: the navigation finishes
-// asynchronously and the user may have typed more in the meantime.
-watch(() => query.value.q ?? '', (q) => {
-  if (q === committed) return
-  committed = q
-  text.value = q
-})
+// useDraftField keeps the field in sync with the URL without the echo race.
+const { text, markCommitted } = useDraftField(() => query.value.q ?? '')
 
 let timer: ReturnType<typeof setTimeout> | undefined
 // Typing with pauses commits several times ("bat", "battery"). Only the first commit
@@ -28,8 +17,7 @@ let pushedWhileFocused = false
 function commit() {
   clearTimeout(timer)
   const q = text.value.trim()
-  if (q === committed) return
-  committed = q
+  if (!markCommitted(q)) return
   update({ q: q || undefined }, { replace: pushedWhileFocused })
   pushedWhileFocused = true
 }

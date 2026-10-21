@@ -12,7 +12,7 @@ Wymagania: Node 24, pnpm 12 (wersja przypięta w `packageManager`, działa przez
 ```bash
 pnpm install
 pnpm dev          # http://localhost:3000
-pnpm test         # Vitest: 68 testów jednostkowych
+pnpm test         # Vitest: 73 testy jednostkowe
 pnpm test:e2e     # Playwright: build produkcyjny + 2 scenariusze (lokalny Chrome)
 pnpm typecheck    # vue-tsc, strict
 pnpm lint
@@ -30,7 +30,7 @@ Te same testy E2E na wdrożeniu: `E2E_BASE_URL=https://sun-store-zadanie.vercel.
 - **SEO zależne od filtrów:** tytuł i H1 odzwierciedlają każdy aktywny filtr (kategoria, producenci, zakres kWh/W, cena, wyszukiwanie, strona); do tego opis, `robots`, canonical, Open Graph i JSON-LD `ItemList`.
 - **Responsywność:** na telefonie filtry są w pełnoekranowym dialogu.
 - Wdrożenie na Vercel. Lighthouse: mobile 92, desktop 100, Accessibility, Best Practices i SEO po 100.
-- Testy: Vitest, 68 testów (wyciąganie kWh/W, CSV, kontrakt zapytania, filtrowanie, fasety, SEO, paginacja) i Playwright (scenariusz z zadania oraz SSR bez JavaScriptu).
+- Testy: Vitest, 73 testy (wyciąganie kWh/W, CSV, kontrakt zapytania, filtrowanie, fasety, SEO, paginacja, pola powiązane z URL) i Playwright (scenariusz z zadania oraz SSR bez JavaScriptu).
 
 ## Struktura
 
@@ -51,13 +51,14 @@ server/
   api/products.get.ts            # GET /api/products
 app/
   composables/useProductQuery.ts # jedyne miejsce, które czyta i zapisuje URL
+  composables/useDraftField.ts   # pole tekstowe powiązane z URL, odporne na wyścig z nawigacją
   pages/index.vue                # useFetch + SEO
   components/                    # filtry, wyszukiwarka, karta, paginacja, chipy
   utils/pagination.ts            # numery stron z przerwami (1 … 4 5 6 … 12)
 tests/unit/, tests/e2e/, playwright.config.ts
 ```
 
-Szczegółowy dziennik decyzji i poprawek w trakcie pracy: [NOTES.md](NOTES.md).
+Szczegółowy dziennik decyzji i poprawek w trakcie pracy: [NOTES.md](NOTES.md). Słownik pojęć: [GLOSSARY.md](GLOSSARY.md).
 
 ---
 
@@ -79,6 +80,8 @@ Dzięki temu jeden zestaw filtrów ma jeden URL, co ma znaczenie dla cache CDN i
 **Fasety jak w Algolii.** Licznik przy producencie liczy wyniki z pominięciem *własnego* filtra („ile byłoby wyników dla EcoCharge przy pozostałych filtrach”). Zaznaczony producent z wynikiem 0 zostaje na liście, żeby dało się go odznaczyć. Zakresy cen i kWh/W są liczone z całej kategorii, żeby pola nie zmieniały granic przy każdym kliknięciu.
 
 **Filtr i sortowanie po kWh/W tylko po wybraniu kategorii.** kWh (baterie) i W (panele) są nieporównywalne. Bez kategorii serwer ignoruje te parametry, a UI podpowiada, że trzeba wybrać baterie albo panele.
+
+**Pola tekstowe powiązane z URL** (wyszukiwarka, zakresy cen i kWh/W) korzystają z jednego modułu `useDraftField`. Nawigacja kończy się asynchronicznie, więc zmiana URL wywołana własnym zatwierdzeniem przychodzi z opóźnieniem i nie może nadpisać tego, co użytkownik w tym czasie dopisał. Ten wyścig wyszedł najpierw w wyszukiwarce, a przegląd architektury znalazł go ponownie w polach ceny (wpisanie minimum, Tab, pisanie maksimum czyściło pole). Poprawka jest teraz w jednym miejscu, z testem jednostkowym odtwarzającym kolejność zdarzeń.
 
 **Wyszukiwanie.** Każde słowo musi wystąpić w nazwie, producencie lub opisie, bez rozróżniania wielkości liter. Liczby pasują tylko jako całe liczby: „10” znajdzie „10kWh”, ale nie „100” ani „10.5”. Pole ma debounce 350 ms, a jedna sesja pisania, trwająca do Entera albo wyjścia z pola, tworzy jeden wpis w historii (pierwsze zatwierdzenie `push`, kolejne `replace`). Wstecz nie przechodzi więc przez niedopisane frazy, a każde osobne wyszukiwanie da się cofnąć.
 
@@ -134,6 +137,7 @@ Obecna implementacja realizuje już tę regułę na parametrach query (`buildLis
 3. CI w GitHub Actions: lint, typecheck, Vitest i Playwright na każdym PR, Playwright także na preview deployment.
 4. Pomiar u prawdziwych użytkowników (Vercel Speed Insights) i monitoring błędów (Sentry).
 5. Algolia InstantSearch z fasetami, gdy katalog urośnie poza zakres filtrowania w pamięci.
+6. Z przeglądu architektury (świadomie odłożone, bo dziś działają poprawnie, a refaktor tuż przed wysłaniem to ryzyko bez widocznego zysku): liczniki faset liczone tymi samymi regułami co linki (dziś zgodne, sprawdzone na 43 opcjach); jedna tabela sortowań zamiast trzech miejsc; jeden moduł opisujący aktywne filtry dla chipów i tytułu; flaga „cena za jednostkę ma sens” w definicji jednostki (przed dodaniem np. amperów dla złączek).
 
 ## 5. Wynik Lighthouse
 
@@ -180,6 +184,7 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 - **Escape w JSON-LD był pozorny.** Sekwencja `<` zamieniła się przy zapisie pliku w zwykłe `<`, więc zamiana nic nie robiła. Wyłapał to test bezpieczeństwa; ostatecznie escape robi unhead (sprawdzone w jego kodzie).
 - **Reguła CSS poprawiająca kontrast nie działała,** bo CSS Vuetify ładuje się później. Wyłapał to drugi pomiar Lighthouse; zostało rozwiązane zmienną motywu.
 - **Natywny `<select>` z `:value`** nie przeżywał SSR: po odświeżeniu pole pokazywało „Featured”. Wyłapał to test E2E z wyłączonym JS.
+- **Przegląd architektury (skill `improve-codebase-architecture`) znalazł ten sam wyścig co w wyszukiwarce, tym razem w polach ceny.** Odtworzyłem go ręcznie, a poprawkę wydzieliłem do jednego modułu. Z pięciu kandydatów zrobiłem tylko ten jeden: pozostałe po sprawdzeniu (np. 43 liczniki faset zgodne z wynikami) okazały się zabezpieczeniem na przyszłość, a nie błędem. Test E2E dla tego wyścigu odrzuciłem, bo na szybkim serwerze produkcyjnym przechodził także na starym kodzie, więc niczego nie dowodził; dowodem jest test jednostkowy.
 - **„Zbędna” asercja usunięta na sugestię przeglądu AI była jedynym czekaniem** przed jednorazowym odczytem listy. Lokalnie test przechodził, na Vercelu się sypał (wyścig z żądaniem).
 - **Drobne błędy typów:** agent przeglądu twierdził, że typ zdarzenia `v-checkbox` to `any`, a typecheck pokazał `string[] | null`. `z.coerce.number()` wewnątrz `.pipe()` nie kompiluje się w Zod 4; pojawiło się to dwa razy, raz w pierwszej wersji kodu, raz w sugestii przeglądu.
 - **Dziennik czasu:** AI wpisało w NOTES szacowane godziny zamiast zmierzonych. Poprawione na podstawie znaczników czasu commitów, od tej pory tylko z `date`.
@@ -188,9 +193,9 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 
 ## 7. Ile czasu realnie poświęciłem
 
-Łącznie **ok. 2 h 50 min zegarowo** w dwóch sesjach: 13:31–14:59 i 19:00–20:22, z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
+Łącznie **ok. 3 h 15 min zegarowo** w dwóch sesjach: 13:31–14:59 i 19:00–20:46, z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
 
-Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 5 min**.
+Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 30 min**.
 
 | Etap | Czas |
 |---|---|
@@ -201,5 +206,6 @@ Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i 
 | Wdrożenie, Lighthouse, poprawki wydajności i dostępności | 19:15–19:44 |
 | Playwright E2E | 19:55–20:06 |
 | README, końcowy code review i poprawki | 20:10–20:22 |
+| Przegląd architektury i poprawka wyścigu w polach ceny | 20:22–20:46 |
 
 Pozostałe okienka (14:40–14:59, 19:07–19:15, 19:44–19:55, 20:06–20:10) to tłumaczenia. Część okienka 13:55–14:11 to tłumaczenie Nitro i Zod przemieszane z przeglądem kodu. Pełna tabela jest w [NOTES.md](NOTES.md).
