@@ -22,7 +22,7 @@
 | 6. Playwright E2E (+ simplify) | 19:55 | 20:06 |
 | 6b. Objaśnienia etapu 6 | 20:06 | 20:10 |
 | 7. README | 20:10 | 20:12 |
-| 8. Code review całości + improve-codebase-architecture | 20:14 | |
+| 8. Code review całości + poprawki, README sekcje 6–7 | 20:14 | 20:22 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.

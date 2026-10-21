@@ -160,8 +160,6 @@ Pierwszy pomiar dał mobile 83 / A11y 96 i desktop 99 / A11y 90. Poprawki:
 
 ## 6. Jak korzystałem z AI
 
-> **[DO WERYFIKACJI PRZEZ AUTORA: opisz własnymi słowami, jeśli coś się nie zgadza]**
-
 Pracowałem z **Claude Code** (Claude Opus) jako partnerem do programowania, etapami:
 1. plan;
 2. dane i kWh/W;
@@ -172,7 +170,7 @@ Pracowałem z **Claude Code** (Claude Opus) jako partnerem do programowania, eta
 7. E2E;
 8. README.
 
-Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, które dodatki zrobić) i zatwierdzałem każdy etap. AI pisało kod i tłumaczyło go, a ja dopytywałem o rzeczy, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja). Po każdym etapie uruchamiałem automatyczny przegląd (skill `simplify`, cztery osie: reuse, uproszczenia, wydajność, właściwa warstwa), a po etapie 3 code review całości (zgodność ze standardami i ze specyfikacją).
+Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, które dodatki zrobić), zatwierdzałem każdy etap i sam testowałem stronę w przeglądarce, lokalnie i po wdrożeniu na Vercel. AI pisało kod i tłumaczyło go, a ja dopytywałem o rzeczy, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja). Po każdym etapie uruchamiałem automatyczny przegląd (skill `simplify`, cztery osie: reuse, uproszczenia, wydajność, właściwa warstwa), a po etapie 3 code review całości (zgodność ze standardami i ze specyfikacją).
 
 **Gdzie trzeba było poprawiać wynik AI i dlaczego:**
 - **Skill do Nuxta ze skills.sh odrzucony.** Był wygenerowany pod Nuxt 5 i podsuwałby API, którego w Nuxt 4.6 nie ma.
@@ -190,11 +188,18 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 
 ## 7. Ile czasu realnie poświęciłem
 
-> **[DO UZUPEŁNIENIA PO ZAKOŃCZENIU: liczby z tabeli w [NOTES.md](NOTES.md)]**
+Łącznie **ok. 2 h 50 min zegarowo** w dwóch sesjach: 13:31–14:59 i 19:00–20:22, z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
 
-Według znaczników czasu (`git log`, `date`):
-- dwie sesje: 13:31–14:59 i od 19:00;
-- czas zegarowy obejmuje też naukę, czyli tłumaczenie kodu i pytania o technologie, których wcześniej nie używałem;
-- sama implementacja (plan, kod, przeglądy, wdrożenie, testy, README) to mniej niż czas zegarowy.
+Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 5 min**.
 
-Szczegółowa tabela etapów jest w [NOTES.md](NOTES.md).
+| Etap | Czas |
+|---|---|
+| Analiza zadania, plan, wybór narzędzi | 13:31–13:45 |
+| Setup, dane i kWh/W, kontrakt zapytania i API (z przeglądami) | 13:45–14:18 |
+| UI i stan w URL, code review i poprawki | 14:18–14:40 |
+| SEO | 19:00–19:07 |
+| Wdrożenie, Lighthouse, poprawki wydajności i dostępności | 19:15–19:44 |
+| Playwright E2E | 19:55–20:06 |
+| README, końcowy code review i poprawki | 20:10–20:22 |
+
+Pozostałe okienka (14:40–14:59, 19:07–19:15, 19:44–19:55, 20:06–20:10) to tłumaczenia. Część okienka 13:55–14:11 to tłumaczenie Nitro i Zod przemieszane z przeglądem kodu. Pełna tabela jest w [NOTES.md](NOTES.md).
