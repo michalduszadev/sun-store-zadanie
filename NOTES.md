@@ -13,7 +13,8 @@
 | 3. UI + stan w URL (+ simplify) | 14:18 | 14:35 |
 | 3b. Code review + poprawki | 14:35 | 14:40 |
 | Objaśnienia etapu 3 | 14:40 | 14:55 |
-| **Pauza** | 14:59 | (wznowienie: wpisać z `date`) |
+| **Pauza** | 14:59 | 19:00 |
+| 4. SEO (+ simplify) | 19:00 | 19:07 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -49,6 +50,11 @@
 - **Po code review (2 osie: standardy + zgodność ze specyfikacją)**: wyszukiwanie liczb jako całych liczb („1” nie znajduje „10”/„15A”, „10” znajduje „10kWh”); powtarzane `?manufacturer=a&manufacturer=b` są łączone; jedna sesja pisania w wyszukiwarce = jeden wpis w historii (pierwszy commit `push`, kolejne `replace`); błędna wartość w polu zakresu jest czyszczona zamiast ignorowana po cichu; `categorySpec()` zamiast powtarzanego `category ? CATEGORIES[...].spec : null`; algorytm paginacji wydzielony do `app/utils/pagination.ts` + testy.
 - **Świadomie nie poprawione**: filtr/sort po kWh/W tylko po wyborze kategorii (kWh i W są nieporównywalne, → README); `?page=99` pokazuje ostatnią stronę bez przekierowania (canonical w etapie 4 użyje strony z odpowiedzi); opisy sortowań w toolbarze obok listy `SPEC_SORTS` (3 miejsca przy nowym sorcie, `Record` pilnuje komparatorów).
 
+- **SEO w czystej funkcji `shared/utils/listingSeo.ts`**: `buildListingSeo(query, response)` → h1, title, description, robots, canonical; strona tylko podpina wynik w `useSeoMeta`/`useHead` (gettery → tagi aktualizują się też przy nawigacji po stronie klienta). Testowane jednostkowo.
+- **Reguła indeksowania**: indeksujemy „landing pages” = cały katalog, kategoria, jeden producent, kategoria + jeden producent (oraz ich kolejne strony), o ile mają wyniki. Wyszukiwanie, sortowanie, zakresy, wielu producentów i puste wyniki → `noindex, follow` (nie do indeksu, ale linki i produkty na nich są odkrywane). Powód: kombinacji filtrów jest praktycznie nieskończenie wiele, to prawie-duplikaty i marnowanie crawl budget.
+- **Canonical zawsze na samą siebie, znormalizowany**: bez `utm_*`/śmieci, kolejność parametrów stała, strona przycięta przez serwer (`?page=99` → canonical `?page=7`). Nie łączymy `noindex` z canonical wskazującym *inny* URL (sprzeczne sygnały dla Google). Origin z `useRequestURL()`; w produkcji z własną domeną lepiej `runtimeConfig.public.siteUrl` (żeby `*.vercel.app` i domena nie konkurowały).
+- **JSON-LD `ItemList` → `Product` + `Offer` (EUR) + `additionalProperty` z kodem jednostki UN/CEFACT (KWH, WTT)**: pozycje liczone przez strony (strona 2 zaczyna od 25). Brak `url` produktów (nie ma stron produktu), więc to opis danych, nie rich results. Escapowanie `<` robi unhead dla skryptów typu `*json` (sprawdzone w kodzie i renderem).
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
@@ -57,3 +63,5 @@
 - Agent review twierdził, że `update:modelValue` w `v-checkbox` jest typu `any` → w rzeczywistości `string[] | null`; typecheck to wyłapał.
 - Moja pierwsza wersja `router.options.ts` zastępowała cały domyślny scrollBehavior Nuxta: usunięta.
 - **Wyścig w wyszukiwarce** (złapany testem w przeglądarce, nie przez review ani testy jednostkowe): `watch` URL→pole nadpisywał tekst dopisany w trakcie trwającej nawigacji („bat” + „tery” → „bat”). Poprawka: ignorowanie „echa” własnego commitu.
+- Escape `\u003c` w JSON-LD: przy zapisie pliku sekwencja zamieniła się w dosłowne `<`, więc „escapowanie” było no-opem; złapał to test bezpieczeństwa. Ostatecznie ręczny escape usunięty, bo unhead robi to sam (simplify znalazł, zweryfikowane w źródle i renderem).
+- Dev server nie podłapał auto-importu z nowego pliku w `shared/utils` (500 „buildListingSeo is not defined”), typecheck przechodził → restart serwera.

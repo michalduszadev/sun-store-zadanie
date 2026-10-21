@@ -18,13 +18,43 @@ const { data, status, error, refresh } = await useFetch('/api/products', {
 const loading = computed(() => status.value === 'pending')
 const filtersOpen = ref(false)
 
-const heading = computed(() => (query.value.category ? CATEGORIES[query.value.category].labelPlural : 'All products'))
+// --- SEO: all rules live in shared/utils/listingSeo.ts (pure, unit-tested) ---
+const seo = computed(() => {
+  if (!data.value) return null
+  const meta = buildListingSeo(query.value, data.value)
+  return { ...meta, jsonLd: buildItemListJsonLd(meta.heading, data.value) }
+})
+
+// Absolute URL from the incoming request (works on SSR and in the browser).
+// router.resolve encodes the query exactly like the links on the page.
+const origin = useRequestURL().origin
+const router = useRouter()
+const canonicalUrl = computed(() => seo.value && origin + router.resolve({ path: '/', query: seo.value.canonicalQuery }).href)
+
+// Getters keep the tags reactive: they update on client-side filter changes too.
+useSeoMeta({
+  title: () => seo.value?.title ?? `Products | ${SITE_NAME}`,
+  description: () => seo.value?.description,
+  robots: () => seo.value?.robots,
+  ogTitle: () => seo.value?.title,
+  ogDescription: () => seo.value?.description,
+  ogUrl: () => canonicalUrl.value,
+  ogType: 'website',
+  ogSiteName: SITE_NAME,
+  twitterCard: 'summary',
+})
+
+useHead({
+  link: () => (canonicalUrl.value ? [{ rel: 'canonical', href: canonicalUrl.value }] : []),
+  // unhead serializes the object and escapes "<" for JSON script types.
+  script: () => (seo.value ? [{ type: 'application/ld+json', textContent: seo.value.jsonLd }] : []),
+})
 </script>
 
 <template>
   <v-container class="py-6">
     <h1 class="text-h4 font-weight-bold mb-4">
-      {{ heading }}
+      {{ seo?.heading ?? 'Products' }}
     </h1>
 
     <v-alert v-if="error && !data" type="error" variant="tonal" class="mb-4">
