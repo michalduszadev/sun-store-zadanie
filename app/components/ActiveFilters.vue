@@ -5,7 +5,7 @@ const props = defineProps<{ facets: ProductsResponse['facets'] }>()
 
 const { query, update, reset } = useProductQuery()
 
-const range = (min?: number, max?: number, format = (v: number) => String(v)) =>
+const rangeLabel = (min?: number, max?: number, format = (v: number) => String(v)) =>
   [min !== undefined && `from ${format(min)}`, max !== undefined && `to ${format(max)}`].filter(Boolean).join(' ')
 
 /** One chip per active filter; closing a chip removes just that filter. */
@@ -19,13 +19,13 @@ const chips = computed(() => {
     list.push({ key: `m-${slug}`, label, remove: () => update({ manufacturer: q.manufacturer.filter(s => s !== slug) }) })
   }
   if (q.priceMin !== undefined || q.priceMax !== undefined) {
-    list.push({ key: 'price', label: `Price ${range(q.priceMin, q.priceMax, formatPrice)}`, remove: () => update({ priceMin: undefined, priceMax: undefined }) })
+    list.push({ key: 'price', label: `Price ${rangeLabel(q.priceMin, q.priceMax, formatPrice)}`, remove: () => update({ priceMin: undefined, priceMax: undefined }) })
   }
   // normalize() already cleared specMin/Max if the category has no spec.
-  const spec = q.category ? CATEGORIES[q.category].spec : null
+  const spec = categorySpec(q.category)
   if (spec && (q.specMin !== undefined || q.specMax !== undefined)) {
     const { label, unit } = spec
-    list.push({ key: 'spec', label: `${label} ${range(q.specMin, q.specMax)} ${unit}`, remove: () => update({ specMin: undefined, specMax: undefined }) })
+    list.push({ key: 'spec', label: `${label} ${rangeLabel(q.specMin, q.specMax)} ${unit}`, remove: () => update({ specMin: undefined, specMax: undefined }) })
   }
   if (q.q) list.push({ key: 'q', label: `“${q.q}”`, remove: () => update({ q: undefined }) })
 

@@ -7,17 +7,30 @@ const { query, update } = useProductQuery()
 // otherwise every keystroke would be a request and a history entry.
 const text = ref(query.value.q ?? '')
 
+// Last value this field wrote to the URL.
+let committed = query.value.q ?? ''
+
 // URL -> field: back/forward or "Clear all" must also update the input.
-watch(() => query.value.q, (q) => {
-  if ((q ?? '') !== text.value.trim()) text.value = q ?? ''
+// The URL change caused by our own commit is ignored: the navigation finishes
+// asynchronously and the user may have typed more in the meantime.
+watch(() => query.value.q ?? '', (q) => {
+  if (q === committed) return
+  committed = q
+  text.value = q
 })
 
 let timer: ReturnType<typeof setTimeout> | undefined
+// Typing with pauses commits several times ("bat", "battery"). Only the first commit
+// adds a history entry; later ones replace it, so "back" skips half-typed queries.
+let pushedWhileFocused = false
 
 function commit() {
   clearTimeout(timer)
   const q = text.value.trim()
-  if (q !== (query.value.q ?? '')) update({ q: q || undefined })
+  if (q === committed) return
+  committed = q
+  update({ q: q || undefined }, { replace: pushedWhileFocused })
+  pushedWhileFocused = true
 }
 
 function onInput(value: string | null) {
@@ -42,5 +55,6 @@ onBeforeUnmount(() => clearTimeout(timer))
     hide-details
     @update:model-value="onInput"
     @keydown.enter="commit"
+    @blur="pushedWhileFocused = false"
   />
 </template>

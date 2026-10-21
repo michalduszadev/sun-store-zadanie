@@ -19,9 +19,12 @@ export function useProductQuery() {
     return { path: route.path, query: serializeProductQuery(updateProductQuery(query.value, patch)) }
   }
 
-  /** Applies a change by navigating. `push` adds a history entry, so "back" undoes it. */
-  function update(patch: Partial<ProductQuery>) {
-    return router.push(linkTo(patch))
+  /**
+   * Applies a change by navigating. `push` adds a history entry, so "back" undoes it;
+   * `replace` overwrites the current one (used while a search is still being typed).
+   */
+  function update(patch: Partial<ProductQuery>, { replace = false } = {}) {
+    return replace ? router.replace(linkTo(patch)) : router.push(linkTo(patch))
   }
 
   function reset() {

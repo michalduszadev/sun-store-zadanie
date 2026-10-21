@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CATEGORIES, CATEGORY_SLUGS, type CategorySlug } from './categories'
+import { CATEGORY_SLUGS, categorySpec, type CategorySlug } from './categories'
 
 /**
  * The filter state of the listing page. It lives in the URL, so this module
@@ -38,7 +38,10 @@ const amount = z.string().trim().min(1).transform(Number).pipe(z.number().nonneg
 
 const schema = z.object({
   category: z.enum(CATEGORY_SLUGS).optional().catch(undefined),
-  manufacturer: z.string().transform(value => value.split(',').filter(slug => SLUG.test(slug))).catch([]),
+  // "a,b" (our own format) and ?manufacturer=a&manufacturer=b (hand-written links) both work.
+  manufacturer: z.union([z.string(), z.array(z.string())])
+    .transform(value => [value].flat().flatMap(item => item.split(',')).filter(slug => SLUG.test(slug)))
+    .catch([]),
   priceMin: amount,
   priceMax: amount,
   specMin: amount,
@@ -55,7 +58,7 @@ function ordered(min?: number, max?: number): [number?, number?] {
 
 /** Cross-field rules that a per-field schema cannot express. */
 function normalize(query: ProductQuery): ProductQuery {
-  const hasSpec = query.category !== undefined && CATEGORIES[query.category].spec !== null
+  const hasSpec = categorySpec(query.category) !== null
   const [priceMin, priceMax] = ordered(query.priceMin, query.priceMax)
   const [specMin, specMax] = hasSpec ? ordered(query.specMin, query.specMax) : []
 

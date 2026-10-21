@@ -21,6 +21,11 @@ export const CATEGORIES: Record<CategorySlug, CategoryDefinition> = {
   'connector': { csvValue: 'connector', label: 'Connector', labelPlural: 'Connectors & accessories', spec: null },
 }
 
+/** Spec of the selected category; null for "all products" or a category without a spec. */
+export function categorySpec(category?: CategorySlug): CategoryDefinition['spec'] {
+  return category ? CATEGORIES[category].spec : null
+}
+
 export function categoryFromCsv(value: string): CategorySlug | undefined {
   return CATEGORY_SLUGS.find(slug => CATEGORIES[slug].csvValue === value.toLowerCase())
 }

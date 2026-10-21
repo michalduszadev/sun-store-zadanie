@@ -29,7 +29,7 @@
 - **Fasety**: liczniki producentów/kategorii liczone z pominięciem *własnego* filtra (klasyczny faceting, jak w Algolii). Wybrany producent z 0 wynikami zostaje widoczny, żeby dało się go odznaczyć. Zakresy ceny/spec z całej kategorii, żeby suwaki nie skakały.
 - **Wyszukiwanie**: każde słowo musi wystąpić (AND) w nazwie, producencie lub opisie, case-insensitive. „10 kwh” znajdzie „10kWh”. Brak fuzzy/stemmingu → w produkcji Algolia (mają ją w stacku).
 - **Strona poza zakresem** → przycinana do ostatniej (zamiast pustej listy).
-- **Cache-Control** `s-maxage=3600, stale-while-revalidate`: dane zmieniają się tylko z deployem, a Vercel czyści CDN przy deployu. Nagłówek ustawiany *po* udanym wczytaniu katalogu, żeby nie cache'ować błędu.
+- **Cache-Control** `max-age=60, s-maxage=3600, stale-while-revalidate=86400`: dane zmieniają się tylko z deployem, a Vercel czyści CDN przy deployu. Nagłówek ustawiany *po* udanym wczytaniu katalogu, żeby nie cache'ować błędu.
 - **`getQuery` zamiast `getValidatedQuery`**: ten drugi służy do walidacji, która rzuca 400; my celowo nie rzucamy.
 
 - **`useProductQuery`**: jedyne miejsce, które czyta/pisze URL. `query = computed(parse(route.query))`, `update(patch)` = `router.push` (nowy wpis w historii → wstecz działa), `linkTo(patch)` dla `:to` (kategorie i strony to prawdziwe `<a href>`, crawlowalne).
@@ -40,6 +40,9 @@
 - **Scroll**: domyślne zachowanie Nuxt przy zmianie samego query = brak przewijania (dobre dla filtrów); paginacja przewija na górę sama. Własny `router.options.ts` usunięty po review (nadpisywał całe domyślne zachowanie Nuxt, łącznie z obsługą hash i czekaniem na render).
 - **Odłożone do etapu 5 (najpierw pomiar Lighthouse)**: lżejsze karty (mniej komponentów Vuetify), natywny `<select>`, `routeRules` cache dla HTML.
 
+- **Po code review (2 osie: standardy + zgodność ze specyfikacją)**: wyszukiwanie liczb jako całych liczb („1” nie znajduje „10”/„15A”, „10” znajduje „10kWh”); powtarzane `?manufacturer=a&manufacturer=b` są łączone; jedna sesja pisania w wyszukiwarce = jeden wpis w historii (pierwszy commit `push`, kolejne `replace`); błędna wartość w polu zakresu jest czyszczona zamiast ignorowana po cichu; `categorySpec()` zamiast powtarzanego `category ? CATEGORIES[...].spec : null`; algorytm paginacji wydzielony do `app/utils/pagination.ts` + testy.
+- **Świadomie nie poprawione**: filtr/sort po kWh/W tylko po wyborze kategorii (kWh i W są nieporównywalne, → README); `?page=99` pokazuje ostatnią stronę bez przekierowania (canonical w etapie 4 użyje strony z odpowiedzi); opisy sortowań w toolbarze obok listy `SPEC_SORTS` (3 miejsca przy nowym sorcie, `Record` pilnuje komparatorów).
+
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.
 - Zod 4: `z.string().pipe(z.coerce.number())` nie typuje się (coerce ma input `unknown`) → zamienione na `.transform(Number).pipe(z.number())`.
@@ -47,3 +50,4 @@
 - Simplify etapu 2 wyłapał realny problem projektowy: brak wspólnej reguły „zmiana kategorii czyści zakres spec”, więc zakres 5–10 kWh przeszedłby na panele jako 5–10 W.
 - Agent review twierdził, że `update:modelValue` w `v-checkbox` jest typu `any` → w rzeczywistości `string[] | null`; typecheck to wyłapał.
 - Moja pierwsza wersja `router.options.ts` zastępowała cały domyślny scrollBehavior Nuxta: usunięta.
+- **Wyścig w wyszukiwarce** (złapany testem w przeglądarce, nie przez review ani testy jednostkowe): `watch` URL→pole nadpisywał tekst dopisany w trakcie trwającej nawigacji („bat” + „tery” → „bat”). Poprawka: ignorowanie „echa” własnego commitu.

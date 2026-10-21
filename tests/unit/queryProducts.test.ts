@@ -49,6 +49,13 @@ describe('queryProducts: filtering', () => {
     expect(names({ q: 'MC4' })).toEqual(['Fuse 15A'])
     expect(names({ q: 'lfp nmc' })).toEqual([])
   })
+
+  it('matches numbers as whole numbers only', () => {
+    expect(names({ q: '1' })).toEqual([])
+    expect(names({ q: '10' })).toEqual(['Bat 10'])
+    expect(names({ q: '45' })).toEqual([])
+    expect(names({ q: '15a' })).toEqual(['Fuse 15A'])
+  })
 })
 
 describe('queryProducts: sorting and paging', () => {

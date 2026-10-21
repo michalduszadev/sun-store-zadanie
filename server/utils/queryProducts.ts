@@ -1,9 +1,22 @@
 import type { FacetOption, NumericRange, ProductsResponse } from '#shared/types/api'
 import type { Product } from '#shared/types/product'
-import { CATEGORIES, CATEGORY_SLUGS, type CategorySlug } from '#shared/utils/categories'
+import { CATEGORIES, CATEGORY_SLUGS, categorySpec, type CategorySlug } from '#shared/utils/categories'
 import { PAGE_SIZE, type ProductQuery, type SortOption } from '#shared/utils/productQuery'
 
 type Comparator = (a: Product, b: Product) => number
+
+const NUMERIC_WORD = /^\d+(?:\.\d+)?$/
+
+/**
+ * A search word becomes a test on the lowercased product text.
+ * Words match anywhere ("kwh" finds "10kWh"), but numbers only match whole
+ * numbers: "1" must not find "10" or "15A", while "10" still finds "10kWh".
+ */
+function wordMatcher(word: string): (text: string) => boolean {
+  if (!NUMERIC_WORD.test(word)) return text => text.includes(word)
+  const pattern = new RegExp(String.raw`(?<![\d.,])${word.replace('.', String.raw`\.`)}(?![\d]|[.,]\d)`)
+  return text => pattern.test(text)
+}
 
 /** `featured` keeps the catalog (CSV) order: toSorted is stable, so 0 changes nothing. */
 const COMPARATORS: Record<SortOption, Comparator> = {
@@ -24,7 +37,7 @@ const COMPARATORS: Record<SortOption, Comparator> = {
  * Spec filters belong to the category, so ignoring the category ignores them too.
  */
 function createFilter(query: ProductQuery, ignore?: 'category' | 'manufacturer') {
-  const words = query.q?.toLowerCase().split(/\s+/).filter(Boolean) ?? []
+  const matchers = query.q?.toLowerCase().split(/\s+/).filter(Boolean).map(wordMatcher) ?? []
 
   return (p: Product): boolean => {
     if (ignore !== 'category') {
@@ -35,9 +48,9 @@ function createFilter(query: ProductQuery, ignore?: 'category' | 'manufacturer')
     if (ignore !== 'manufacturer' && query.manufacturer.length > 0 && !query.manufacturer.includes(p.manufacturerSlug)) return false
     if (query.priceMin !== undefined && p.price < query.priceMin) return false
     if (query.priceMax !== undefined && p.price > query.priceMax) return false
-    if (words.length > 0) {
+    if (matchers.length > 0) {
       const text = `${p.name} ${p.manufacturer} ${p.description}`.toLowerCase()
-      if (!words.every(word => text.includes(word))) return false
+      if (!matchers.every(matches => matches(text))) return false
     }
     return true
   }
@@ -80,7 +93,7 @@ export function queryProducts(catalog: readonly Product[], query: ProductQuery, 
   // Range bounds come from the whole category, not the current results,
   // so the price/spec inputs keep stable limits while the user narrows down.
   const inCategory = query.category ? catalog.filter(p => p.category === query.category) : catalog
-  const spec = query.category ? CATEGORIES[query.category].spec : null
+  const spec = categorySpec(query.category)
 
   return {
     items: sorted.slice((page - 1) * pageSize, page * pageSize),

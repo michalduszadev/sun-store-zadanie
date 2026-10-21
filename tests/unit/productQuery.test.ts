@@ -47,6 +47,11 @@ describe('parseProductQuery', () => {
     expect(parseProductQuery({ priceMin: '', q: '', page: ['1', '2'] })).toEqual(DEFAULT_QUERY)
   })
 
+  it('merges repeated manufacturer params', () => {
+    expect(parseProductQuery({ manufacturer: ['solarix', 'apex-solar,ecocharge'] }).manufacturer)
+      .toEqual(['apex-solar', 'ecocharge', 'solarix'])
+  })
+
   it('swaps min and max when given in the wrong order', () => {
     expect(parseProductQuery({ priceMin: '900', priceMax: '100' })).toMatchObject({ priceMin: 100, priceMax: 900 })
   })

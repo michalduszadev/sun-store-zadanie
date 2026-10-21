@@ -29,6 +29,9 @@ function parse(text: string): number | undefined {
 
 function commit() {
   const next = { min: parse(minText.value), max: parse(maxText.value) }
+  // Show what is applied: invalid input ("abc", "-5") is cleared, not silently ignored.
+  minText.value = toText(next.min)
+  maxText.value = toText(next.max)
   if (next.min !== props.min || next.max !== props.max) emit('change', next)
 }
 </script>

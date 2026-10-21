@@ -5,13 +5,7 @@ const props = defineProps<{ page: number, pageCount: number }>()
 
 const { linkTo } = useProductQuery()
 
-/** 1 … 4 5 6 … 12: first, last and neighbours of the current page. */
-const pages = computed(() => {
-  const { page, pageCount } = props
-  const wanted = new Set([1, pageCount, page - 1, page, page + 1].filter(p => p >= 1 && p <= pageCount))
-  const sorted = [...wanted].sort((a, b) => a - b)
-  return sorted.flatMap<number | 'gap'>((p, i) => (i > 0 && p - sorted[i - 1]! > 1 ? ['gap', p] : [p]))
-})
+const pages = computed(() => paginationItems(props.page, props.pageCount))
 
 // Nuxt keeps the scroll position when only the query changes (good for filters).
 // A new page of results should start at the top, so pagination scrolls explicitly.

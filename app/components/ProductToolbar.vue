@@ -15,7 +15,7 @@ const sortItems = computed(() => {
     { title: 'Name: A to Z', value: 'name-asc' },
   ]
   // Spec sorts only inside a category with a spec (the API ignores them otherwise).
-  const spec = query.value.category ? CATEGORIES[query.value.category].spec : null
+  const spec = categorySpec(query.value.category)
   if (spec) {
     const { label, unit } = spec
     items.push(

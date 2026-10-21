@@ -4,6 +4,14 @@ import type { ProductsResponse } from '#shared/types/api'
 defineProps<{ facets: ProductsResponse['facets'] }>()
 
 const { query, linkTo, update } = useProductQuery()
+
+// "solar panels (W) or batteries (kWh)", derived so it cannot drift from CATEGORIES.
+const specHint = CATEGORY_SLUGS
+  .flatMap((slug) => {
+    const { labelPlural, spec } = CATEGORIES[slug]
+    return spec ? [`${labelPlural.toLowerCase()} (${spec.unit})`] : []
+  })
+  .join(' or ')
 </script>
 
 <template>
@@ -82,7 +90,7 @@ const { query, linkTo, update } = useProductQuery()
       @change="({ min, max }) => update({ specMin: min, specMax: max })"
     />
     <p v-else class="text-caption text-medium-emphasis">
-      Pick batteries or solar panels to filter by capacity (kWh) or power (W).
+      Pick {{ specHint }} to filter and sort by capacity or power.
     </p>
   </div>
 </template>
