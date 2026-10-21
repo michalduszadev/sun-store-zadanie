@@ -1,4 +1,4 @@
-import type { ProductSpec, SpecUnit } from '#shared/types/product'
+import type { ProductSpec, SpecUnit } from '../types/product'
 
 // The CSV has no currency; EUR is assumed (European B2B marketplace).
 // Formatters are created once: Intl constructors are relatively expensive.
@@ -15,5 +15,13 @@ export const formatPrice = (value: number) => price.format(value)
 export const formatSpec = (spec: ProductSpec) => `${number.format(spec.value)} ${spec.unit}`
 
 export const formatUnitPrice = (value: number, unit: SpecUnit) => `${unitPrice[unit].format(value)}/${unit}`
+
+/** "€100.00–€300.00", "from 5 kWh", "up to €300.00"; null when neither bound is set. Shared by SEO titles and filter chips. */
+export function formatRange(min: number | undefined, max: number | undefined, format: (value: number) => string): string | null {
+  if (min !== undefined && max !== undefined) return `${format(min)}–${format(max)}`
+  if (min !== undefined) return `from ${format(min)}`
+  if (max !== undefined) return `up to ${format(max)}`
+  return null
+}
 
 export const formatProductCount = (count: number) => `${count} ${count === 1 ? 'product' : 'products'}`

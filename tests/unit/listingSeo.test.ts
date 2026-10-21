@@ -47,6 +47,20 @@ describe('buildListingSeo: heading and title', () => {
     expect(seo({ category: 'solar-panel', specMin: '400' }).title).toBe('Solar panels from 400 W | sun.store')
   })
 
+  it('names several manufacturers and the price range', () => {
+    expect(seo({ category: 'battery', manufacturer: 'ecocharge,aurapower', priceMax: '1500' })).toMatchObject({
+      heading: 'AuraPower & EcoCharge batteries',
+      title: 'AuraPower & EcoCharge batteries up to €1,500.00 | sun.store',
+    })
+    expect(seo({ category: 'solar-panel', priceMin: '100', priceMax: '300' }).title)
+      .toBe('Solar panels €100.00–€300.00 | sun.store')
+  })
+
+  it('shortens a long manufacturer list', () => {
+    const res = response({ facets: facets([['a', 'A', 1], ['b', 'B', 1], ['c', 'C', 1], ['d', 'D', 1]]) })
+    expect(seo({ manufacturer: 'a,b,c,d' }, res).heading).toBe('A, B +2 products')
+  })
+
   it('shows the search phrase in the title', () => {
     expect(seo({ category: 'battery', q: 'lfp' }).title).toBe('“lfp” in Batteries | sun.store')
   })
@@ -78,6 +92,14 @@ describe('buildListingSeo: indexing rules', () => {
     [{ manufacturer: 'ecocharge,aurapower' }],
   ])('keeps filter combinations out of the index but lets crawlers follow links: %o', (query) => {
     expect(seo(query).robots).toBe('noindex, follow')
+  })
+
+  it('keeps a failed load out of the index but still gives it a title', () => {
+    expect(buildListingSeo(parseProductQuery({ category: 'battery' }), null)).toMatchObject({
+      title: 'Products | sun.store',
+      robots: 'noindex, follow',
+      canonicalQuery: { category: 'battery' },
+    })
   })
 
   it('does not index an empty result page', () => {

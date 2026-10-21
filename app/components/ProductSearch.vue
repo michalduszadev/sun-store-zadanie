@@ -22,6 +22,7 @@ watch(() => query.value.q ?? '', (q) => {
 let timer: ReturnType<typeof setTimeout> | undefined
 // Typing with pauses commits several times ("bat", "battery"). Only the first commit
 // adds a history entry; later ones replace it, so "back" skips half-typed queries.
+// Enter or leaving the field ends the session: the next search gets its own entry.
 let pushedWhileFocused = false
 
 function commit() {
@@ -54,7 +55,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     clearable
     hide-details
     @update:model-value="onInput"
-    @keydown.enter="commit"
+    @keydown.enter="commit(); pushedWhileFocused = false"
     @blur="pushedWhileFocused = false"
   />
 </template>

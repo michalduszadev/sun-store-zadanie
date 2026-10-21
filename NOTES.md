@@ -21,7 +21,8 @@
 | 5b. Objaśnienia etapu 5, hydracja | 19:44 | 19:55 |
 | 6. Playwright E2E (+ simplify) | 19:55 | 20:06 |
 | 6b. Objaśnienia etapu 6 | 20:06 | 20:10 |
-| 7. README | 20:10 | |
+| 7. README | 20:10 | 20:12 |
+| 8. Code review całości + improve-codebase-architecture | 20:14 | |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.
@@ -76,6 +77,9 @@
 
 - **Playwright E2E** (`tests/e2e/filters.spec.ts`, 2 testy): (1) scenariusz z zadania: kategoria (link) → producent (checkbox) → sort po kWh → URL zawiera wszystko → reload → te same wyniki i stan kontrolek → „wstecz” cofa tylko sort; (2) **z wyłączonym JavaScriptem**: link z filtrami renderuje na serwerze właściwe produkty, zaznaczony checkbox, wartość sortowania, `<title>` i `robots`. Testy idą na buildzie produkcyjnym (`webServer`), a `E2E_BASE_URL=https://sun-store-zadanie.vercel.app pnpm test:e2e` odpala je na wdrożeniu. Lokalny Chrome (`channel: 'chrome'`) zamiast pobierania Chromium. Czekanie na hydrację tym samym sprawdzeniem co oficjalny `@nuxt/test-utils` (`useNuxtApp().isHydrating === false`), bez dodawania zależności.
 - **Natywny `<select>` zamiast `v-select`** do sortowania: `v-select` chowa prawdziwy input pod tekstem wybranej opcji (Playwright nie mógł kliknąć, czytniki ekranu też mają trudniej), dociąga kod overlay do hydracji; natywny na telefonie otwiera systemowy wybierak. `selected` na `<option>`, nie `:value` na `<select>`: HTML nie ma atrybutu value dla selecta, więc tylko to przeżywa SSR.
+
+- **Końcowy code review (od pierwszego commita)**: tytuł i H1 odzwierciedlają teraz każdy filtr (wcześniej zakres ceny i kilku producentów nie zmieniało tytułu: luka względem „tytuł zależny od filtrów”); przypadek błędu API przeniesiony do modułu SEO (`buildListingSeo(query, null)` → `noindex`, strona nie podejmuje już decyzji SEO); jedno `formatRange` dla tytułów i chipów (`shared/utils/format.ts`); `hrefFor` w composable zamiast budowania URL w stronie; karta jako `<article>` (semantyka + lokator E2E po roli); Enter kończy „sesję” wyszukiwania (kolejna fraza = nowy wpis w historii); `robots` jako unia literałów.
+- **Świadomie nie poprawione po review**: `HEAD /api/products` → 404 (endpoint tylko GET); zduplikowane propsy elementu „All products” w liście kategorii; tabela kodów UN/CEFACT obok jednostek w `categories.ts` (`Record` pilnuje kompletności).
 
 ## Użycie AI / poprawki
 - Skill `onmax/nuxt-skills` (skills.sh) **odrzucony**: jego `nuxt` SKILL.md jest wygenerowany pod Nuxt 5 (Nitro v3, `nuxt/server` imports). W projekcie Nuxt 4.6 podsuwałby nieistniejące API.

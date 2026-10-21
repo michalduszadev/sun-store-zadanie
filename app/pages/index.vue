@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { mdiClose } from '@mdi/js'
 
-const { query, reset } = useProductQuery()
+const { query, reset, hrefFor } = useProductQuery()
 
 // Fetch with the *normalized* query, not raw route.query: one filter set maps to
 // one request URL (better CDN cache hits), and junk params (utm_*, typos) are dropped.
@@ -19,25 +19,20 @@ const loading = computed(() => status.value === 'pending')
 const filtersOpen = ref(false)
 
 // --- SEO: all rules live in shared/utils/listingSeo.ts (pure, unit-tested) ---
-const seo = computed(() => {
-  if (!data.value) return null
-  const meta = buildListingSeo(query.value, data.value)
-  return { ...meta, jsonLd: buildItemListJsonLd(meta.heading, data.value) }
-})
+const seo = computed(() => buildListingSeo(query.value, data.value ?? null))
+const jsonLd = computed(() => data.value && buildItemListJsonLd(seo.value.heading, data.value))
 
 // Absolute URL from the incoming request (works on SSR and in the browser).
-// router.resolve encodes the query exactly like the links on the page.
 const origin = useRequestURL().origin
-const router = useRouter()
-const canonicalUrl = computed(() => seo.value && origin + router.resolve({ path: '/', query: seo.value.canonicalQuery }).href)
+const canonicalUrl = computed(() => origin + hrefFor(seo.value.canonicalQuery))
 
 // Getters keep the tags reactive: they update on client-side filter changes too.
 useSeoMeta({
-  title: () => seo.value?.title ?? `Products | ${SITE_NAME}`,
-  description: () => seo.value?.description,
-  robots: () => seo.value?.robots,
-  ogTitle: () => seo.value?.title,
-  ogDescription: () => seo.value?.description,
+  title: () => seo.value.title,
+  description: () => seo.value.description,
+  robots: () => seo.value.robots,
+  ogTitle: () => seo.value.title,
+  ogDescription: () => seo.value.description,
   ogUrl: () => canonicalUrl.value,
   ogType: 'website',
   ogSiteName: SITE_NAME,
@@ -45,16 +40,16 @@ useSeoMeta({
 })
 
 useHead({
-  link: () => (canonicalUrl.value ? [{ rel: 'canonical', href: canonicalUrl.value }] : []),
+  link: () => [{ rel: 'canonical', href: canonicalUrl.value }],
   // unhead serializes the object and escapes "<" for JSON script types.
-  script: () => (seo.value ? [{ type: 'application/ld+json', textContent: seo.value.jsonLd }] : []),
+  script: () => (jsonLd.value ? [{ type: 'application/ld+json', textContent: jsonLd.value }] : []),
 })
 </script>
 
 <template>
   <v-container class="py-6">
     <h1 class="text-h4 font-weight-bold mb-4">
-      {{ seo?.heading ?? 'Products' }}
+      {{ seo.heading }}
     </h1>
 
     <v-alert v-if="error && !data" type="error" variant="tonal" class="mb-4">

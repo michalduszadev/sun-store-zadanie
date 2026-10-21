@@ -15,7 +15,7 @@ const ICONS: Record<CategorySlug, string> = {
 <!-- Plain HTML inside one v-card: the card has no interactivity, and 24 cards x
      ~6 Vuetify components each was a measurable share of hydration time on mobile. -->
 <template>
-  <v-card variant="outlined" class="product-card d-flex flex-column h-100 pa-4 ga-3">
+  <v-card tag="article" variant="outlined" class="product-card d-flex flex-column h-100 pa-4 ga-3">
     <div class="d-flex align-center ga-3">
       <span class="category-icon">
         <svg viewBox="0 0 24 24" width="24" height="24" role="img" :aria-label="CATEGORIES[product.category].label">

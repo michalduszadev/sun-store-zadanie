@@ -1,6 +1,7 @@
 import type { ProductsResponse } from '../types/api'
 import type { SpecUnit } from '../types/product'
 import { CATEGORIES, categorySpec } from './categories'
+import { formatPrice, formatRange } from './format'
 import { PAGE_SIZE, serializeProductQuery, type ProductQuery } from './productQuery'
 
 /**
@@ -13,8 +14,8 @@ export interface ListingSeo {
   heading: string
   title: string
   description: string
-  /** "index, follow" for landing pages, "noindex, follow" for filter combinations. */
-  robots: string
+  /** Landing pages are indexed; filter combinations, empty results and failed loads are not. */
+  robots: 'index, follow' | 'noindex, follow'
   /** Query of the canonical URL: normalized, junk params (utm_*...) dropped, page as clamped by the server. */
   canonicalQuery: Record<string, string>
 }
@@ -35,29 +36,44 @@ function isIndexable(query: ProductQuery, total: number): boolean {
     && [query.priceMin, query.priceMax, query.specMin, query.specMax].every(value => value === undefined)
 }
 
-function rangeText(min: number | undefined, max: number | undefined, unit: SpecUnit): string | null {
-  if (min !== undefined && max !== undefined) return `${min}–${max} ${unit}`
-  if (min !== undefined) return `from ${min} ${unit}`
-  if (max !== undefined) return `up to ${max} ${unit}`
-  return null
+/** "EcoCharge", "EcoCharge & AuraPower", "EcoCharge, AuraPower +2" */
+function manufacturerNames(slugs: string[], response: ProductsResponse): string | undefined {
+  const names = slugs.map(slug => response.facets.manufacturers.find(m => m.value === slug)?.label ?? slug)
+  if (names.length <= 2) return names.join(' & ') || undefined
+  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`
 }
 
-export function buildListingSeo(query: ProductQuery, response: ProductsResponse): ListingSeo {
+/**
+ * `response` is null when the API call failed: the page still gets a title,
+ * but stays out of the index.
+ */
+export function buildListingSeo(query: ProductQuery, response: ProductsResponse | null): ListingSeo {
+  const canonicalQuery = serializeProductQuery({ ...query, page: response?.page ?? query.page })
+  if (!response) {
+    return {
+      heading: 'Products',
+      title: `Products | ${SITE_NAME}`,
+      description: 'Solar panels, batteries and connectors for PV installers on a B2B marketplace.',
+      robots: 'noindex, follow',
+      canonicalQuery,
+    }
+  }
+
   const category = query.category ? CATEGORIES[query.category] : null
   const spec = categorySpec(query.category)
-  const manufacturer = query.manufacturer.length === 1
-    ? response.facets.manufacturers.find(m => m.value === query.manufacturer[0])?.label
-    : undefined
+  const manufacturer = manufacturerNames(query.manufacturer, response)
 
-  // "EcoCharge batteries", "solar panels", "EcoCharge products", "products"
+  // "EcoCharge batteries", "solar panels", "EcoCharge & AuraPower products", "products"
   const noun = [manufacturer, category?.labelPlural.toLowerCase() ?? 'products'].filter(Boolean).join(' ')
-  // "EcoCharge batteries", "Solar panels", "EcoCharge products", "All products"
+  // "EcoCharge batteries", "Solar panels", "EcoCharge & AuraPower products", "All products"
   const heading = manufacturer ? noun : (category?.labelPlural ?? 'All products')
 
-  const specRange = spec ? rangeText(query.specMin, query.specMax, spec.unit) : null
+  // Every active filter shows up in the title: "Batteries 5–10 kWh €500.00–€1,500.00"
+  const specRange = spec && formatRange(query.specMin, query.specMax, String)
   const titleParts = [
     query.q ? `“${query.q}” in ${heading}` : heading,
-    specRange,
+    spec && specRange && `${specRange} ${spec.unit}`,
+    formatRange(query.priceMin, query.priceMax, formatPrice),
   ].filter(Boolean).join(' ')
   const title = `${titleParts}${response.page > 1 ? ` – Page ${response.page}` : ''} | ${SITE_NAME}`
 
@@ -72,7 +88,7 @@ export function buildListingSeo(query: ProductQuery, response: ProductsResponse)
     title,
     description,
     robots: isIndexable(query, response.total) ? 'index, follow' : 'noindex, follow',
-    canonicalQuery: serializeProductQuery({ ...query, page: response.page }),
+    canonicalQuery,
   }
 }
 

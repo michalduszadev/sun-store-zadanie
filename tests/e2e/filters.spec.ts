@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-/** Product names in the order shown on the page. */
-const productNames = (page: Page) => page.locator('.product-card h2')
+/** Product names in the order shown on the page (each card is an <article> with an h2). */
+const productNames = (page: Page) => page.getByRole('article').getByRole('heading', { level: 2 })
 
 type NuxtWindow = Window & { useNuxtApp?: () => { isHydrating: boolean } }
 

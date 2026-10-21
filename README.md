@@ -12,7 +12,7 @@ Wymagania: Node 24, pnpm 12 (wersja przypięta w `packageManager`, działa przez
 ```bash
 pnpm install
 pnpm dev          # http://localhost:3000
-pnpm test         # Vitest: 65 testów jednostkowych
+pnpm test         # Vitest: 68 testów jednostkowych
 pnpm test:e2e     # Playwright: build produkcyjny + 2 scenariusze (lokalny Chrome)
 pnpm typecheck    # vue-tsc, strict
 pnpm lint
@@ -27,10 +27,10 @@ Te same testy E2E na wdrożeniu: `E2E_BASE_URL=https://sun-store-zadanie.vercel.
 - **Sortowanie** po cenie, nazwie, kWh/W oraz **cenie za kWh lub W** (dla instalatora B2B to realna metryka).
 - Filtrowanie, wyszukiwanie, sortowanie, paginacja i liczniki odbywają się na **serwerze** (`GET /api/products`, Nitro). Dane są czytane z CSV, bez bazy.
 - **Stan filtrów w URL.** Link z filtrami renderuje się w SSR z właściwymi wynikami, a przyciski wstecz i dalej działają.
-- **SEO zależne od filtrów:** tytuł, opis, `robots`, canonical, Open Graph i JSON-LD `ItemList`.
+- **SEO zależne od filtrów:** tytuł i H1 odzwierciedlają każdy aktywny filtr (kategoria, producenci, zakres kWh/W, cena, wyszukiwanie, strona); do tego opis, `robots`, canonical, Open Graph i JSON-LD `ItemList`.
 - **Responsywność:** na telefonie filtry są w pełnoekranowym dialogu.
 - Wdrożenie na Vercel. Lighthouse: mobile 92, desktop 100, Accessibility, Best Practices i SEO po 100.
-- Testy: Vitest (wyciąganie kWh/W, CSV, kontrakt zapytania, filtrowanie, fasety, SEO, paginacja) i Playwright (scenariusz z zadania oraz SSR bez JavaScriptu).
+- Testy: Vitest, 68 testów (wyciąganie kWh/W, CSV, kontrakt zapytania, filtrowanie, fasety, SEO, paginacja) i Playwright (scenariusz z zadania oraz SSR bez JavaScriptu).
 
 ## Struktura
 
@@ -39,6 +39,8 @@ shared/                          # kod wspólny dla serwera i przeglądarki (Nux
   utils/productQuery.ts          # kontrakt URL ↔ filtry: schemat zod, normalizacja, serializacja
   utils/categories.ts            # kategorie i ich jednostki (jedno źródło prawdy)
   utils/listingSeo.ts            # tytuł/opis/robots/canonical + JSON-LD (czyste funkcje)
+  utils/format.ts                # ceny (EUR), kWh/W, zakresy: wspólne dla UI i SEO
+  utils/slugify.ts               # slugi w URL ("Quantum Energy" → quantum-energy)
   types/                         # Product, ProductsResponse
 server/
   assets/products.csv            # dane (pakowane do builda serwera)
@@ -51,7 +53,8 @@ app/
   composables/useProductQuery.ts # jedyne miejsce, które czyta i zapisuje URL
   pages/index.vue                # useFetch + SEO
   components/                    # filtry, wyszukiwarka, karta, paginacja, chipy
-tests/unit/, tests/e2e/
+  utils/pagination.ts            # numery stron z przerwami (1 … 4 5 6 … 12)
+tests/unit/, tests/e2e/, playwright.config.ts
 ```
 
 Szczegółowy dziennik decyzji i poprawek w trakcie pracy: [NOTES.md](NOTES.md).
@@ -67,7 +70,7 @@ Szczegółowy dziennik decyzji i poprawek w trakcie pracy: [NOTES.md](NOTES.md).
 - sortuje slugi producentów;
 - usuwa wartości domyślne z URL.
 
-Dzięki temu jeden zestaw filtrów ma jeden URL, co ma znaczenie dla cache CDN i canonical. Reguły zmian z UI też są w tym pliku: każda zmiana wraca na stronę 1, a zmiana kategorii czyści zakres kWh/W.
+Dzięki temu jeden zestaw filtrów ma jeden URL, co ma znaczenie dla cache CDN i canonical. Link ze śmieciowymi parametrami (`?category=xx&utm_source=…`) pokazuje to samo co bez nich, a jego canonical wskazuje czysty adres. Reguły zmian z UI też są w tym pliku: każda zmiana wraca na stronę 1, a zmiana kategorii czyści zakres kWh/W.
 
 **Logika jako czyste funkcje, I/O osobno.** `parseProductsCsv`, `extractSpec`, `queryProducts` i `buildListingSeo` nie znają Nuxta, więc testuje je Vitest bez uruchamiania aplikacji. Endpoint i strona tylko je łączą.
 
@@ -77,7 +80,7 @@ Dzięki temu jeden zestaw filtrów ma jeden URL, co ma znaczenie dla cache CDN i
 
 **Filtr i sortowanie po kWh/W tylko po wybraniu kategorii.** kWh (baterie) i W (panele) są nieporównywalne. Bez kategorii serwer ignoruje te parametry, a UI podpowiada, że trzeba wybrać baterie albo panele.
 
-**Wyszukiwanie.** Każde słowo musi wystąpić w nazwie, producencie lub opisie, bez rozróżniania wielkości liter. Liczby pasują tylko jako całe liczby: „10” znajdzie „10kWh”, ale nie „100” ani „10.5”. Pole ma debounce 350 ms, a jedna sesja pisania tworzy jeden wpis w historii (pierwsze zatwierdzenie `push`, kolejne `replace`). Wstecz nie przechodzi więc przez niedopisane frazy.
+**Wyszukiwanie.** Każde słowo musi wystąpić w nazwie, producencie lub opisie, bez rozróżniania wielkości liter. Liczby pasują tylko jako całe liczby: „10” znajdzie „10kWh”, ale nie „100” ani „10.5”. Pole ma debounce 350 ms, a jedna sesja pisania, trwająca do Entera albo wyjścia z pola, tworzy jeden wpis w historii (pierwsze zatwierdzenie `push`, kolejne `replace`). Wstecz nie przechodzi więc przez niedopisane frazy, a każde osobne wyszukiwanie da się cofnąć.
 
 **Paginacja na serwerze (24 na stronę) jako zwykłe linki.** HTML jest mniejszy, a robot może przejść po `<a href="?page=2">`. `v-pagination` renderuje przyciski, więc paginacja jest napisana od nowa. Kategorie też są linkami.
 

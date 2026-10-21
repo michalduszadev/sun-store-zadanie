@@ -27,9 +27,14 @@ export function useProductQuery() {
     return replace ? router.replace(linkTo(patch)) : router.push(linkTo(patch))
   }
 
+  /** Relative href of a query, encoded exactly like the links on the page (used for canonical). */
+  function hrefFor(query: Record<string, string>): string {
+    return router.resolve({ path: route.path, query }).href
+  }
+
   function reset() {
     return router.push({ path: route.path })
   }
 
-  return { query, linkTo, update, reset }
+  return { query, linkTo, update, hrefFor, reset }
 }
