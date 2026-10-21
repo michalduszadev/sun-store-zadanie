@@ -27,6 +27,7 @@
 | 8c. Wspólny moduł `useDraftField` + testy, README | 20:38 | 20:46 |
 | Kontrole przed rozmową + strona do nauki (nie wliczane do zadania) | 20:46 | 21:02 |
 | README sekcja 4 prostszym językiem | 21:02 | 21:03 |
+| README sekcja 1 prostszym językiem (wstawienie po akceptacji; czasu przygotowania propozycji nie zmierzyłem `date`, kilka minut ok. 21:05–21:10, niewliczone) | 21:15 | 21:16 |
 
 ## Decyzje
 - **Vuetify 3.13 zamiast 4.x**: v4 jest już stabilne, ale produkcja sun.store stoi na Vuetify 3 (ogłoszenie). Kod ma być „ich”.

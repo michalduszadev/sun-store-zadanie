@@ -64,38 +64,60 @@ Szczegółowy dziennik decyzji i poprawek w trakcie pracy: [NOTES.md](NOTES.md).
 
 ## 1. Kluczowe decyzje i dlaczego
 
-**URL jako jedyne źródło stanu, bez Pinii.** Filtry istnieją tylko w query stringu. Composable `useProductQuery` wylicza z niego typowany stan i zapisuje zmiany przez `router.push`. SSR, linki do udostępnienia i przycisk wstecz działają więc z definicji, a nie dzięki synchronizacji dwóch stanów, co jest typowym źródłem błędów. `useFetch` obserwuje znormalizowane query i pobiera dane ponownie przy każdej zmianie. Podczas SSR wynik trafia do payloadu, więc przeglądarka nie pobiera go drugi raz.
+### Filtry są zapisane tylko w adresie strony (URL)
+- **Co:** wybrane filtry istnieją wyłącznie w adresie, np. `/?category=battery&manufacturer=ecocharge`. Nie ma osobnego „magazynu stanu” (takiego jak Pinia). Jeden plik, `useProductQuery`, czyta filtry z adresu i zapisuje każdą zmianę jako nowy wpis w historii przeglądarki.
+- **Dlaczego:** skoro filtry są tylko w adresie, trzy wymagania z zadania działają same. Link wysłany komuś pokazuje te same wyniki, serwer od razu renderuje właściwą stronę, a przycisk „wstecz” cofa ostatni filtr. Przy dwóch miejscach (adres i magazyn) trzeba by je ciągle synchronizować, a to częste źródło błędów.
+- **Dane:** `useFetch` pobiera produkty przy każdej zmianie filtrów. Przy pierwszym wejściu serwer wysyła stronę razem z danymi, więc przeglądarka nie pyta API drugi raz.
 
-**Jeden kontrakt zapytania w `shared/`.** Ten sam schemat zod parsuje `getQuery()` na serwerze i `route.query` w przeglądarce. Każde pole ma `.catch()`: niepoprawna wartość jest pomijana, więc `?page=abc` daje stronę 1, a nie błąd 400 czy 500. Link z literówką i tak pokazuje listę. Normalizacja:
-- zamienia min z max, jeśli podano je odwrotnie;
-- sortuje slugi producentów;
-- usuwa wartości domyślne z URL.
+### Te same reguły czytania filtrów dla serwera i przeglądarki
+- **Co:** plik `shared/utils/productQuery.ts` opisuje, jakie filtry są dozwolone i jak je odczytać z adresu. Korzysta z niego i serwer (API), i przeglądarka. Reguły są zapisane biblioteką zod, która sprawdza dane w trakcie działania aplikacji.
+- **Błędne wartości są pomijane, a nie zgłaszane jako błąd.** `?page=abc` daje stronę 1, a nieznana kategoria jest ignorowana. Link z literówką nadal pokazuje listę produktów.
+- **Ten sam zestaw filtrów zawsze daje ten sam adres.** Kod zamienia min z max, jeśli ktoś podał je odwrotnie, sortuje producentów i usuwa wartości domyślne oraz obce parametry (np. `utm_source` z newslettera). Dzięki temu serwery Vercela (CDN) mogą zapamiętywać odpowiedzi, a Google widzi jeden adres zamiast wielu kopii.
+- **Reguły zmian:** każda zmiana filtra wraca na stronę 1, a zmiana kategorii czyści zakres kWh/W.
 
-Dzięki temu jeden zestaw filtrów ma jeden URL, co ma znaczenie dla cache CDN i canonical. Link ze śmieciowymi parametrami (`?category=xx&utm_source=…`) pokazuje to samo co bez nich, a jego canonical wskazuje czysty adres. Reguły zmian z UI też są w tym pliku: każda zmiana wraca na stronę 1, a zmiana kategorii czyści zakres kWh/W.
+### Logika w zwykłych funkcjach, oddzielona od Nuxta
+- **Co:** wczytanie CSV, wyciąganie kWh/W, filtrowanie i reguły SEO to zwykłe funkcje. Dostają dane, zwracają wynik i nie wiedzą nic o Nuxcie ani o przeglądarce. Endpoint API i strona tylko je wywołują.
+- **Dlaczego:** takie funkcje da się szybko przetestować (Vitest) bez uruchamiania aplikacji, a każda reguła jest w jednym, łatwym do wskazania miejscu.
 
-**Logika jako czyste funkcje, I/O osobno.** `parseProductsCsv`, `extractSpec`, `queryProducts` i `buildListingSeo` nie znają Nuxta, więc testuje je Vitest bez uruchamiania aplikacji. Endpoint i strona tylko je łączą.
+### Plik CSV jest częścią zbudowanej aplikacji
+- **Co:** CSV leży w `server/assets`. Część serwerowa Nuxta (Nitro) dołącza ten folder do builda, a kod czyta plik przez `useStorage('assets:server')`.
+- **Dlaczego:** na Vercelu serwer działa jako funkcja w chmurze bez dostępu do plików z repozytorium, więc zwykłe `fs.readFile('products.csv')` by nie zadziałało.
+- **Wydajność i odporność:** plik jest parsowany raz na uruchomienie serwera, a nie przy każdym żądaniu. Błędny wiersz CSV jest pomijany z ostrzeżeniem i numerem linii, a reszta katalogu działa.
 
-**CSV jako server asset.** Plik leży w `server/assets`, a czyta go `useStorage('assets:server')`, nie `fs`. Nitro pakuje go do funkcji serverless, a na Vercel względne ścieżki do plików nie istnieją. Katalog jest parsowany raz na instancję (zapamiętany promise) i zwracany jako `readonly`, bo współdzielą go wszystkie żądania. Wiersze waliduje zod: zły wiersz jest pomijany z ostrzeżeniem i numerem linii, a reszta katalogu działa.
+### Liczniki przy filtrach, jak w dużych sklepach
+- **Co:** przy każdym producencie widać liczbę, np. „EcoCharge (5)”: tyle produktów zobaczysz po jego zaznaczeniu, przy pozostałych wybranych filtrach.
+- **Szczegóły:**
+  - licząc producentów, pomijam filtr producenta, bo inaczej po zaznaczeniu jednego wszyscy pozostali mieliby 0;
+  - zaznaczony producent zostaje na liście nawet z wynikiem 0, żeby dało się go odznaczyć;
+  - granice pól ceny i kWh/W liczę z całej kategorii, żeby nie zmieniały się przy każdym kliknięciu.
 
-**Fasety jak w Algolii.** Licznik przy producencie liczy wyniki z pominięciem *własnego* filtra („ile byłoby wyników dla EcoCharge przy pozostałych filtrach”). Zaznaczony producent z wynikiem 0 zostaje na liście, żeby dało się go odznaczyć. Zakresy cen i kWh/W są liczone z całej kategorii, żeby pola nie zmieniały granic przy każdym kliknięciu.
+### Filtr i sortowanie po kWh/W tylko po wybraniu kategorii
+- kWh (pojemność baterii) i W (moc panelu) to różne wielkości i nie da się ich porównać. Bez wybranej kategorii serwer ignoruje te parametry, a strona podpowiada, żeby wybrać baterie albo panele.
 
-**Filtr i sortowanie po kWh/W tylko po wybraniu kategorii.** kWh (baterie) i W (panele) są nieporównywalne. Bez kategorii serwer ignoruje te parametry, a UI podpowiada, że trzeba wybrać baterie albo panele.
+### Pola tekstowe nie gubią tego, co wpisujesz
+- **Problem:** wyszukiwarka i pola „od–do” zapisują wartość do adresu z opóźnieniem. Zanim zmiana adresu się zakończy, użytkownik może już pisać dalej, a stary kod nadpisywał wtedy pole starszą wartością. Przykład: wpisanie minimum ceny, Tab i pisanie maksimum czyściło pole maksimum.
+- **Rozwiązanie:** wspólny moduł `useDraftField` rozpoznaje, że zmiana adresu pochodzi z własnego zapisu, i wtedy nie nadpisuje pola. Działa w wyszukiwarce i we wszystkich polach zakresów, a test odtwarza dokładnie tę kolejność zdarzeń.
 
-**Pola tekstowe powiązane z URL** (wyszukiwarka, zakresy cen i kWh/W) korzystają z jednego modułu `useDraftField`. Nawigacja kończy się asynchronicznie, więc zmiana URL wywołana własnym zatwierdzeniem przychodzi z opóźnieniem i nie może nadpisać tego, co użytkownik w tym czasie dopisał. Ten wyścig wyszedł najpierw w wyszukiwarce, a przegląd architektury znalazł go ponownie w polach ceny (wpisanie minimum, Tab, pisanie maksimum czyściło pole). Poprawka jest teraz w jednym miejscu, z testem jednostkowym odtwarzającym kolejność zdarzeń.
+### Wyszukiwanie
+- Każde wpisane słowo musi wystąpić w nazwie, producencie lub opisie. Wielkość liter nie ma znaczenia.
+- Liczby muszą pasować w całości: „10” znajdzie „10kWh”, ale nie „100” ani „10.5”.
+- Wyszukiwanie startuje po 350 ms przerwy w pisaniu. Wpisanie jednej frazy to jeden krok w historii przeglądarki, więc „wstecz” nie przechodzi przez „b”, „ba”, „bat”…
 
-**Wyszukiwanie.** Każde słowo musi wystąpić w nazwie, producencie lub opisie, bez rozróżniania wielkości liter. Liczby pasują tylko jako całe liczby: „10” znajdzie „10kWh”, ale nie „100” ani „10.5”. Pole ma debounce 350 ms, a jedna sesja pisania, trwająca do Entera albo wyjścia z pola, tworzy jeden wpis w historii (pierwsze zatwierdzenie `push`, kolejne `replace`). Wstecz nie przechodzi więc przez niedopisane frazy, a każde osobne wyszukiwanie da się cofnąć.
+### Strony wyników jako zwykłe linki
+- Na jednej stronie są 24 produkty, a kolejne strony to zwykłe linki `?page=2`. Robot Google może po nich przejść, a użytkownik może je otworzyć w nowej karcie.
+- Gotowy komponent Vuetify (`v-pagination`) używa przycisków zamiast linków, więc paginację napisałem sam. Kategorie też są linkami.
 
-**Paginacja na serwerze (24 na stronę) jako zwykłe linki.** HTML jest mniejszy, a robot może przejść po `<a href="?page=2">`. `v-pagination` renderuje przyciski, więc paginacja jest napisana od nowa. Kategorie też są linkami.
+### Vuetify 3 (jak w sun.store), ale z dbałością o szybkość
+- ikony jako małe obrazki SVG zamiast całego fontu z ikonami;
+- czcionka systemowa zamiast pobieranej z sieci Roboto;
+- własny nagłówek zamiast `v-app-bar`: ten komponent ustala swoją wysokość dopiero po załadowaniu JavaScriptu, przez co cała strona „podskakiwała” (w Lighthouse: CLS);
+- panel filtrów jest na telefonie ukryty, więc jego JavaScript w ogóle się nie uruchamia (Nuxt: `hydrate-on-visible`);
+- prostsza karta produktu i zwykła lista `<select>` do sortowania, czyli mniej kodu do uruchomienia w przeglądarce.
 
-**Vuetify 3, bo to stack sun.store, ale z myślą o wydajności:**
-- ikony SVG z `@mdi/js` zamiast fontu ikon;
-- systemowy font zamiast Roboto;
-- zwykły `<header>` zamiast `v-app-bar`, który mierzy się dopiero po hydracji i powodował przesunięcie układu (CLS);
-- **opóźniona hydracja** sidebaru (`hydrate-on-visible`): na telefonie jest ukryty, więc nie hydratuje się wcale;
-- lżejsza karta produktu;
-- natywny `<select>` zamiast `v-select`.
-
-**Założenia przy niejasnościach.** W CSV nie ma waluty, więc przyjąłem **EUR** (europejski marketplace). Przyjąłem też, że ceny są **netto**, bo w B2B zwykle podaje się je bez VAT. UI jest po angielsku, bo dane są po angielsku, a rynek europejski. README jest po polsku.
+### Założenia tam, gdzie zadanie nic nie mówiło
+- Waluta: **EUR**. W CSV jej nie ma, a sun.store to europejski marketplace.
+- Ceny **netto**, bo w handlu B2B podaje się je bez VAT.
+- Interfejs po angielsku, bo dane są po angielsku. README po polsku.
 
 ## 2. Jak pozyskałem kWh/W i jakie przypadki brzegowe obsłużyłem
 
@@ -212,9 +234,9 @@ Ja podejmowałem decyzje zakresowe (Vuetify 3 jak w stacku firmy, język UI, kt�
 
 ## 7. Ile czasu realnie poświęciłem
 
-Łącznie **ok. 3 h 15 min zegarowo** (195 min): 13:31–14:59, 19:00–20:46 i 21:02–21:03 (poprawa czytelności README), z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
+Łącznie **ok. 3 h 16 min zegarowo** (196 min): 13:31–14:59, 19:00–20:46, 21:02–21:03 i 21:15–21:16 (poprawa czytelności README), z przerwą 15:00–19:00. Źródłem są znaczniki czasu commitów (`git log`) i `date`, a nie szacunki.
 
-Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 30 min**.
+Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i odpowiedzi na moje pytania o technologie, których wcześniej nie używałem (Nitro, Zod, opóźniona hydracja, SEO fasetowe, JSON-LD). Sama praca nad zadaniem (plan, kod, przeglądy, wdrożenie, testy, README) to więc **ok. 2 h 31 min**.
 
 | Etap | Czas |
 |---|---|
@@ -226,6 +248,6 @@ Czas zegarowy obejmuje też naukę: ok. **45 min** zajęło tłumaczenie kodu i 
 | Playwright E2E | 19:55–20:06 |
 | README, końcowy code review i poprawki | 20:10–20:22 |
 | Przegląd architektury i poprawka wyścigu w polach ceny | 20:22–20:46 |
-| Poprawa czytelności README (sekcja 4) | 21:02–21:03 |
+| Poprawa czytelności README (sekcje 4 i 1) | 21:02–21:03, 21:15–21:16 |
 
 Pozostałe okienka (14:40–14:59, 19:07–19:15, 19:44–19:55, 20:06–20:10) to tłumaczenia. Część okienka 13:55–14:11 to tłumaczenie Nitro i Zod przemieszane z przeglądem kodu. Pełna tabela jest w [NOTES.md](NOTES.md).
